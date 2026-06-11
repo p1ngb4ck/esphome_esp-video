@@ -1,37 +1,37 @@
 # esphome_esp-video
 
-Composants externes [ESPHome](https://esphome.io/) pour la capture vidéo, les
-pilotes de capteurs caméra et l'affichage caméra LVGL sur les cibles Espressif
-ESP32 (en particulier l'**ESP32-P4** avec interface MIPI-CSI).
+External [ESPHome](https://esphome.io/) components for video capture, camera
+sensor drivers and LVGL camera display on Espressif ESP32 targets (especially
+the **ESP32-P4** with the MIPI-CSI interface).
 
-## Composants
+## Components
 
-| Composant | Rôle |
+| Component | Role |
 |-----------|------|
-| `esp_video` | Pipeline vidéo (CSI / DVP / ISP / JPEG) basé sur le framework `esp_video` d'Espressif. Doit toujours être présent. |
-| `esp_cam_sensor` | Pilotes de capteurs caméra + transformations matérielles (PPA : crop / resize / rotation / miroir). |
-| `lvgl_camera_display` | Widget LVGL affichant le flux caméra en direct sur un `canvas`, avec superpositions de détection optionnelles. |
+| `esp_video` | Video pipeline (CSI / DVP / ISP / JPEG) built on Espressif's `esp_video` framework. Must always be present. |
+| `esp_cam_sensor` | Camera sensor drivers + hardware transforms (PPA: crop / resize / rotation / mirror). |
+| `lvgl_camera_display` | LVGL widget that displays the live camera stream on a `canvas`, with optional detection overlays. |
 
-Ces trois composants fonctionnent ensemble :
+These three components work together:
 
 ```
-[capteur MIPI-CSI] → esp_cam_sensor → esp_video (ISP/encodage) → lvgl_camera_display → canvas LVGL
+[MIPI-CSI sensor] → esp_cam_sensor → esp_video (ISP/encoding) → lvgl_camera_display → LVGL canvas
 ```
 
-## Installation dans ESPHome
+## Installation in ESPHome
 
-Référencez ce dépôt comme source de composants externes :
+Reference this repository as an external component source:
 
 ```yaml
 external_components:
-  # Pilotes caméra + affichage (ce dépôt)
+  # Camera drivers + display (this repository)
   - source:
       type: git
       url: https://github.com/youkorr/esphome_esp-video
     components: [esp_video, esp_cam_sensor, lvgl_camera_display]
     refresh: 0s
 
-  # LVGL 9.5 personnalisé — REQUIS par lvgl_camera_display (accélération PPA)
+  # Custom LVGL 9.5 — REQUIRED by lvgl_camera_display (PPA acceleration)
   - source:
       type: git
       url: https://github.com/youkorr/lvgl_9.5
@@ -40,22 +40,21 @@ external_components:
     refresh: always
 ```
 
-> ℹ️ Le composant `mipi_dsi` (affichage MIPI-DSI de l'ESP32-P4) est désormais
-> **intégré nativement à ESPHome** — aucun composant externe n'est nécessaire.
+> ℹ️ The `mipi_dsi` component (ESP32-P4 MIPI-DSI display interface) is now
+> **integrated natively into ESPHome** — no external component is needed.
 
-> ⚠️ Ces composants ciblent l'**ESP32-P4** (`esp32` + framework `esp-idf`).
-> La PSRAM est obligatoire pour les buffers vidéo.
+> ⚠️ These components target the **ESP32-P4** (`esp32` + `esp-idf` framework).
+> PSRAM is mandatory for the video buffers.
 
-> 🔗 **Dépendance LVGL obligatoire.** `lvgl_camera_display` recopie les images
-> dans un `canvas` LVGL via l'accélération matérielle **PPA**. Cela nécessite le
-> fork **LVGL 9.5** (`https://github.com/youkorr/lvgl_9.5`, licence MIT) — le
-> composant `lvgl` officiel d'ESPHome ne fournit pas `use_ppa`. Le dépôt
-> `lvgl_9.4` est obsolète et ne doit plus être utilisé.
+> 🔗 **Mandatory LVGL dependency.** `lvgl_camera_display` copies frames into an
+> LVGL `canvas` using the **PPA** hardware accelerator. This requires the
+> **LVGL 9.5** fork (`https://github.com/youkorr/lvgl_9.5`, MIT licensed) — the
+> official ESPHome `lvgl` component does not provide `use_ppa`.
 
-### 1. Bus I²C
+### 1. I²C bus
 
-Le capteur est piloté via I²C (SCCB). Déclarez le bus et donnez-lui un `id`
-qui sera réutilisé par `esp_video` et `esp_cam_sensor` :
+The sensor is driven over I²C (SCCB). Declare the bus and give it an `id` that
+will be reused by `esp_video` and `esp_cam_sensor`:
 
 ```yaml
 i2c:
@@ -69,70 +68,70 @@ psram:
   speed: 200MHz
 ```
 
-### 2. Pipeline vidéo : `esp_video`
+### 2. Video pipeline: `esp_video`
 
 ```yaml
 esp_video:
   i2c_id: bsp_bus
-  xclk_pin: GPIO36          # broche horloge XCLK (ou -1 / NO_CLOCK si oscillateur PCB)
-  xclk_freq: 24000000       # 1 à 40 MHz (24 MHz typique)
-  enable_jpeg: true         # encodeur JPEG matériel
-  enable_isp: true          # pipeline ISP (RAW → RGB565)
-  use_heap_allocator: true  # allocation des buffers en PSRAM
+  xclk_pin: GPIO36          # XCLK clock pin (or -1 / NO_CLOCK with on-board oscillator)
+  xclk_freq: 24000000       # 1 to 40 MHz (24 MHz typical)
+  enable_jpeg: true         # hardware JPEG encoder
+  enable_isp: true          # ISP pipeline (RAW → RGB565)
+  use_heap_allocator: true  # allocate buffers in PSRAM
 ```
 
-| Option | Défaut | Description |
-|--------|--------|-------------|
-| `i2c_id` | *(requis)* | Bus I²C partagé avec le capteur |
-| `xclk_pin` | `GPIO36` | Broche XCLK (`GPIO36`, un entier, `-1` ou `NO_CLOCK`) |
-| `xclk_freq` | `24000000` | Fréquence XCLK (1–40 MHz) |
-| `enable_jpeg` | `true` | Active l'encodeur JPEG matériel |
-| `enable_isp` | `true` | Active l'ISP (conversion RAW → RGB565) |
-| `use_heap_allocator` | `true` | Place les buffers vidéo en PSRAM |
-| `enable_xclk_init` | `false` | Génère XCLK via LEDC (cartes hors M5Stack) |
+| Option | Default | Description |
+|--------|---------|-------------|
+| `i2c_id` | *(required)* | I²C bus shared with the sensor |
+| `xclk_pin` | `GPIO36` | XCLK pin (`GPIO36`, an integer, `-1` or `NO_CLOCK`) |
+| `xclk_freq` | `24000000` | XCLK frequency (1–40 MHz) |
+| `enable_jpeg` | `true` | Enable the hardware JPEG encoder |
+| `enable_isp` | `true` | Enable the ISP (RAW → RGB565 conversion) |
+| `use_heap_allocator` | `true` | Place video buffers in PSRAM |
+| `enable_xclk_init` | `false` | Generate XCLK via LEDC (non-M5Stack boards) |
 
-> ℹ️ **L'encodeur H.264 est désactivé.** Le device matériel H.264 est compilé
-> sous `#if CONFIG_ESP_VIDEO_ENABLE_HW_H264_VIDEO_DEVICE`, flag jamais positionné
-> par le composant — `/dev/video11` n'est donc pas créé. Il n'existe pas d'option
-> `enable_h264` (elle serait rejetée à la validation). Seuls **ISP** et **JPEG
-> matériel** sont actifs.
+> ℹ️ **The H.264 encoder is disabled.** The hardware H.264 device is compiled
+> under `#if CONFIG_ESP_VIDEO_ENABLE_HW_H264_VIDEO_DEVICE`, a flag the component
+> never sets — so `/dev/video11` is not created. There is no `enable_h264`
+> option (it would be rejected during validation). Only **ISP** and **hardware
+> JPEG** are active.
 
-### 3. Capteur : `esp_cam_sensor`
+### 3. Sensor: `esp_cam_sensor`
 
 ```yaml
 esp_cam_sensor:
   id: tab5_cam
   i2c_id: bsp_bus
   sensor_type: ov5647       # ov5647 | ov02c10 | sc202cs
-  resolution: "640x480"     # voir tableaux par capteur ci-dessous
+  resolution: "640x480"     # see per-sensor tables below
   pixel_format: "RGB565"    # RGB565 (zero-copy LVGL) | YUYV | UYVY | NV12 | JPEG | RAW8
   framerate: 30             # 1–60 fps
-  jpeg_quality: 15          # 1–63 (si pixel_format JPEG)
-  mirror_x: false           # miroir horizontal (matériel PPA)
-  mirror_y: false           # miroir vertical (matériel PPA)
-  rotation: 0               # 0 / 90 / 180 / 270° (matériel PPA)
-  crop_offset_x: 0          # crop horizontal (pixels depuis la gauche)
+  jpeg_quality: 15          # 1–63 (when pixel_format is JPEG)
+  mirror_x: false           # horizontal mirror (PPA hardware)
+  mirror_y: false           # vertical mirror (PPA hardware)
+  rotation: 0               # 0 / 90 / 180 / 270° (PPA hardware)
+  crop_offset_x: 0          # horizontal crop (pixels from the left)
 ```
 
-| Option | Défaut | Description |
-|--------|--------|-------------|
-| `sensor_type` | `sc202cs` | `ov5647`, `ov02c10` ou `sc202cs` (`sensor:` accepté en alias) |
-| `i2c_id` | `0` | Bus I²C partagé |
-| `lane` | `1` | Nombre de lanes MIPI (1–4) |
-| `xclk_pin` | `GPIO36` | Broche XCLK |
-| `xclk_freq` | `24000000` | Fréquence XCLK |
-| `sensor_addr` | `0x36` | Adresse I²C du capteur |
-| `resolution` | `720P` | Résolution (alias ou `LxH`, voir ci-dessous) |
-| `pixel_format` | `JPEG` | Format de pixel de sortie |
-| `framerate` | `30` | Images par seconde (1–60) |
-| `mirror_x` / `mirror_y` | – | Symétrie matérielle (PPA) |
-| `rotation` | – | Rotation matérielle 0/90/180/270° (PPA) |
-| `crop_offset_x` | `0` | Décalage de crop (0–800) |
-| `output_width` / `output_height` | `0` | Redimensionnement matériel PPA (0 = pas de resize) |
+| Option | Default | Description |
+|--------|---------|-------------|
+| `sensor_type` | `sc202cs` | `ov5647`, `ov02c10` or `sc202cs` (`sensor:` accepted as an alias) |
+| `i2c_id` | `0` | Shared I²C bus |
+| `lane` | `1` | Number of MIPI lanes (1–4) |
+| `xclk_pin` | `GPIO36` | XCLK pin |
+| `xclk_freq` | `24000000` | XCLK frequency |
+| `sensor_addr` | `0x36` | Sensor I²C address |
+| `resolution` | `720P` | Resolution (alias or `WxH`, see below) |
+| `pixel_format` | `JPEG` | Output pixel format |
+| `framerate` | `30` | Frames per second (1–60) |
+| `mirror_x` / `mirror_y` | – | Hardware mirroring (PPA) |
+| `rotation` | – | Hardware rotation 0/90/180/270° (PPA) |
+| `crop_offset_x` | `0` | Crop offset (0–800) |
+| `output_width` / `output_height` | `0` | PPA hardware resize (0 = no resize) |
 
-#### Alias de résolution génériques
+#### Generic resolution aliases
 
-Valables pour tous les capteurs (passés au pilote natif) :
+Valid for all sensors (passed to the native driver):
 
 | Alias | Dimensions |
 |-------|------------|
@@ -140,26 +139,26 @@ Valables pour tous les capteurs (passés au pilote natif) :
 | `VGA` / `480P` | 640 × 480 |
 | `720P` | 1280 × 720 |
 | `1080P` | 1920 × 1080 |
-| `"LxH"` | dimensions libres (ex. `"800x600"`) |
+| `"WxH"` | free dimensions (e.g. `"800x600"`) |
 
-## Capteurs supportés et résolutions
+## Supported sensors and resolutions
 
-Trois capteurs sont pleinement validés (détection, ISP et balance des blancs
-gérées automatiquement via leurs registres et leur configuration IPA JSON).
+Three sensors are fully validated (detection, ISP and white balance handled
+automatically through their registers and IPA JSON configuration).
 
 ### OV5647 (MIPI 2-lane, 5 MP)
 
-Capteur de type Raspberry Pi Camera v1. Sortie RAW convertie en RGB565 par l'ISP.
+Raspberry Pi Camera v1 type sensor. RAW output converted to RGB565 by the ISP.
 
-| Résolution | FPS | Notes |
+| Resolution | FPS | Notes |
 |------------|-----|-------|
-| 640 × 480 | 30 | VGA (format custom) |
-| 800 × 600 | 50 | SVGA — mouvement fluide, idéal écrans 1024×600 |
-| 800 × 640 | 50 | natif |
-| 800 × 800 | 50 | natif RAW8 |
-| 1024 × 600 | 30 | format custom (écrans larges) |
-| 1280 × 960 | 45 | natif RAW10 |
-| 1920 × 1080 | 30 | natif RAW10 (1080P) |
+| 640 × 480 | 30 | VGA (custom format) |
+| 800 × 600 | 50 | SVGA — smooth motion, ideal for 1024×600 displays |
+| 800 × 640 | 50 | native |
+| 800 × 800 | 50 | native RAW8 |
+| 1024 × 600 | 30 | custom format (wide displays) |
+| 1280 × 960 | 45 | native RAW10 |
+| 1920 × 1080 | 30 | native RAW10 (1080P) |
 
 ```yaml
 esp_cam_sensor:
@@ -173,35 +172,35 @@ esp_cam_sensor:
 
 ### OV02C10 (MIPI 1-lane, 2 MP)
 
-| Résolution | FPS | Notes |
+| Resolution | FPS | Notes |
 |------------|-----|-------|
-| 640 × 368 | 30 | **recommandé** — ~16:9, FOV ~98 %, aligné 16 octets (rotation sûre) |
-| 640 × 480 | 30 | VGA 4:3 — ⚠️ crop horizontal 25 % (zoom 1,33×, FOV 75 %) |
-| 800 × 600 | 30 | SVGA 4:3 — crop horizontal 25 % |
-| 480 × 640 | 30 | portrait (rotation 270° gérée par LVGL) |
-| 1288 × 728 | 30 | proche HD 16:9, capteur complet downscalé par l'ISP |
-| 1920 × 1080 | 30 | 1080P — capteur complet, FOV 100 % |
+| 640 × 368 | 30 | **recommended** — ~16:9, ~98% FOV, 16-byte aligned (rotation safe) |
+| 640 × 480 | 30 | VGA 4:3 — ⚠️ 25% horizontal crop (1.33× zoom, 75% FOV) |
+| 800 × 600 | 30 | SVGA 4:3 — 25% horizontal crop |
+| 480 × 640 | 30 | portrait (270° rotation handled by LVGL) |
+| 1288 × 728 | 30 | near HD 16:9, full sensor downscaled by the ISP |
+| 1920 × 1080 | 30 | 1080P — full sensor, 100% FOV |
 
-> ❌ `960x540` est **désactivé** (watchdog persistant) — utilisez `800x600` ou `1288x728`.
+> ❌ `960x540` is **disabled** (persistent watchdog) — use `800x600` or `1288x728`.
 
 ```yaml
 esp_cam_sensor:
   id: tab5_cam
   i2c_id: bsp_bus
   sensor_type: ov02c10
-  resolution: "640x368"   # meilleur compromis FOV / 16:9
+  resolution: "640x368"   # best FOV / 16:9 trade-off
   pixel_format: "RGB565"
   framerate: 30
 ```
 
 ### SC202CS (MIPI 1-lane, 2 MP)
 
-Capteur natif 1600 × 1200 avec binning 2×2.
+Native 1600 × 1200 sensor with 2×2 binning.
 
-| Résolution | FPS | Notes |
+| Resolution | FPS | Notes |
 |------------|-----|-------|
-| 800 × 600 | 30 | format natif RAW8, crop centré (recommandé petits écrans) |
-| 1280 × 720 | 30 | 720P (format pilote par défaut) |
+| 800 × 600 | 30 | native RAW8 format, centered crop (recommended for small displays) |
+| 1280 × 720 | 30 | 720P (default driver format) |
 
 ```yaml
 esp_cam_sensor:
@@ -213,47 +212,58 @@ esp_cam_sensor:
   framerate: 30
 ```
 
-> 💡 Pour LVGL, utilisez de préférence `pixel_format: RGB565` : c'est le format
-> natif du `canvas` LVGL, ce qui permet une copie « zero-copy » sans conversion.
+> 💡 For LVGL, prefer `pixel_format: RGB565`: it is the native format of the
+> LVGL `canvas`, which allows a zero-copy transfer without conversion.
 
-## Affichage caméra dans LVGL (Canvas)
+## Camera display in LVGL (Canvas)
 
-`lvgl_camera_display` recopie chaque image du capteur dans un widget `canvas`
-LVGL. La mise en place se fait en **deux temps** :
+`lvgl_camera_display` copies every sensor frame into an LVGL `canvas` widget.
+Setup is done in **two steps**:
 
-1. **Déclarer un widget `canvas`** dans une page LVGL.
-2. **Associer le canvas au composant** avec `configure_canvas()` une fois LVGL prêt.
+1. **Declare a `canvas` widget** in an LVGL page.
+2. **Bind the canvas to the component** with `configure_canvas()` once LVGL is ready.
 
-### Déclaration du composant
+### Component declaration
 
 ```yaml
 lvgl_camera_display:
   id: camera_display
-  camera_id: tab5_cam        # id du esp_cam_sensor
-  canvas_id: camera_canvas   # id du widget canvas LVGL
+  camera_id: tab5_cam        # id of the esp_cam_sensor
+  canvas_id: camera_canvas   # id of the LVGL canvas widget
   update_interval: 33ms      # ~30 FPS
-  # superpositions de détection optionnelles :
+  # optional detection overlays:
   # face_detection_id: face_detect
   # yolo11_detection_id: yolo_detect
   # pedestrian_detection_id: ped_detect
 ```
 
-| Option | Défaut | Description |
-|--------|--------|-------------|
-| `camera_id` | *(requis)* | `id` du `esp_cam_sensor` |
-| `canvas_id` | *(requis)* | `id` du widget `canvas` LVGL cible |
-| `update_interval` | `33ms` | Période de rafraîchissement (33 ms ≈ 30 FPS) |
-| `face_detection_id` | – | Superposition détection de visages |
-| `yolo11_detection_id` | – | Superposition détection YOLO11 |
-| `pedestrian_detection_id` | – | Superposition détection piétons |
+| Option | Default | Description |
+|--------|---------|-------------|
+| `camera_id` | *(required)* | `id` of the `esp_cam_sensor` |
+| `canvas_id` | *(required)* | `id` of the target LVGL `canvas` widget |
+| `update_interval` | `33ms` | Refresh period (33 ms ≈ 30 FPS) |
+| `face_detection_id` | – | Face detection overlay |
+| `yolo11_detection_id` | – | YOLO11 detection overlay |
+| `pedestrian_detection_id` | – | Pedestrian detection overlay |
 
-### Widget Canvas dans LVGL
+### LVGL configuration (LVGL 9.5)
 
-Le bloc `lvgl` doit utiliser le fork **LVGL 9.5** avec l'accélération PPA :
+The `lvgl` block must use the **LVGL 9.5** fork with PPA acceleration. This fork
+adds the following options:
+
+| Option | Description |
+|--------|-------------|
+| `use_ppa` | Enable PPA hardware acceleration for display blits (required by the camera canvas). |
+| `use_ppa_img` | Use the PPA accelerator for image widgets (hardware blit/scale of images). |
+| `fps_benchmark` | Log the rendered frames-per-second for benchmarking. |
+| `perf_monitor` | Enable the LVGL performance monitor overlay (CPU / FPS). |
 
 ```yaml
 lvgl:
-  use_ppa: true               # accélération matérielle PPA (fork LVGL 9.5)
+  use_ppa: true               # PPA hardware acceleration (LVGL 9.5 fork)
+  use_ppa_img: true           # PPA acceleration for image widgets
+  fps_benchmark: true         # log rendered FPS
+  perf_monitor: true          # on-screen performance monitor
   byte_order: little_endian
   displays:
     - main_display
@@ -264,9 +274,9 @@ lvgl:
       widgets:
         - canvas:
             id: camera_canvas
-            width: 640          # = largeur de la résolution capteur
-            height: 480         # = hauteur de la résolution capteur
-            x: 192              # position à l'écran
+            width: 640          # = sensor resolution width
+            height: 480         # = sensor resolution height
+            x: 192              # on-screen position
             y: 60
             bg_color: 0x000000
             border_width: 0
@@ -274,20 +284,23 @@ lvgl:
             pad_all: 0
 ```
 
-⚠️ **Le `canvas` doit avoir exactement les dimensions de la résolution du
-capteur** (ici 640×480) sinon l'image sera tronquée ou déformée.
+⚠️ **The `canvas` must have exactly the sensor resolution dimensions** (here
+640×480) otherwise the image will be cropped or distorted.
 
-### Activation : `configure_canvas()`
+### Activation: `configure_canvas()`
 
-Le canvas doit être lié au composant **une fois LVGL initialisé**. Trois
-déclencheurs possibles : `on_idle` de `lvgl` (méthode utilisée en production), un
-interrupteur `template`, ou l'`on_load` de la page.
+The canvas must be bound to the component **once LVGL is initialized**. Three
+triggers are possible: the `lvgl` `on_idle` (the method used in production), a
+`template` switch, or the page `on_load`.
 
-**Méthode recommandée — `on_idle` de LVGL** (le canvas est lié une seule fois) :
+**Recommended method — LVGL `on_idle`** (the canvas is bound only once):
 
 ```yaml
 lvgl:
   use_ppa: true
+  use_ppa_img: true
+  fps_benchmark: true
+  perf_monitor: true
   byte_order: little_endian
   displays:
     - main_display
@@ -301,12 +314,12 @@ lvgl:
               if (canvas != nullptr) {
                 id(camera_display).configure_canvas(canvas);
                 canvas_configured = true;
-                ESP_LOGI("lvgl", "Canvas configuré pour caméra 640x480");
+                ESP_LOGI("lvgl", "Canvas configured for the 640x480 camera");
               }
             }
 ```
 
-**Variante — interrupteur `template`** (active/désactive le flux à la demande) :
+**Variant — `template` switch** (enable/disable the stream on demand):
 
 ```yaml
 switch:
@@ -321,14 +334,14 @@ switch:
           auto *disp = id(camera_display);
           if (canvas != nullptr && disp != nullptr) {
             disp->configure_canvas(canvas);
-            disp->set_enabled(true);     // démarrer le rafraîchissement
+            disp->set_enabled(true);     // start refreshing
           }
     turn_off_action:
       - lambda: |-
           id(camera_display).set_enabled(false);
 ```
 
-## Exemple minimal complet
+## Complete minimal example
 
 ```yaml
 external_components:
@@ -378,6 +391,9 @@ lvgl_camera_display:
 
 lvgl:
   use_ppa: true
+  use_ppa_img: true
+  fps_benchmark: true
+  perf_monitor: true
   byte_order: little_endian
   displays:
     - main_display
@@ -403,11 +419,11 @@ lvgl:
             y: 0
 ```
 
-## Licence
+## License
 
-Projet distribué sous [Licence MIT](LICENSE).
+This project is released under the [MIT License](LICENSE).
 
-Détenteurs des droits d'auteur :
+Copyright holders:
 
 - ESPHome
 - Espressif Systems (Shanghai) CO LTD
