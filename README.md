@@ -40,13 +40,13 @@ external_components:
     refresh: always
 ```
 
-> ℹ️ The `mipi_dsi` component (ESP32-P4 MIPI-DSI display interface) is now
+> **Note:** The `mipi_dsi` component (ESP32-P4 MIPI-DSI display interface) is now
 > **integrated natively into ESPHome** — no external component is needed.
 
-> ⚠️ These components target the **ESP32-P4** (`esp32` + `esp-idf` framework).
+> **Note:** These components target the **ESP32-P4** (`esp32` + `esp-idf` framework).
 > PSRAM is mandatory for the video buffers.
 
-> 🔗 **Mandatory LVGL dependency.** `lvgl_camera_display` copies frames into an
+> **Mandatory LVGL dependency.** `lvgl_camera_display` copies frames into an
 > LVGL `canvas` using the **PPA** hardware accelerator. This requires the
 > **LVGL 9.5** fork (`https://github.com/youkorr/lvgl_9.5`, MIT licensed) — the
 > official ESPHome `lvgl` component does not provide `use_ppa`.
@@ -90,7 +90,7 @@ esp_video:
 | `use_heap_allocator` | `true` | Place video buffers in PSRAM |
 | `enable_xclk_init` | `false` | Generate XCLK via LEDC (non-M5Stack boards) |
 
-> ℹ️ **The H.264 encoder is disabled.** The hardware H.264 device is compiled
+> **Note: the H.264 encoder is disabled.** The hardware H.264 device is compiled
 > under `#if CONFIG_ESP_VIDEO_ENABLE_HW_H264_VIDEO_DEVICE`, a flag the component
 > never sets — so `/dev/video11` is not created. There is no `enable_h264`
 > option (it would be rejected during validation). Only **ISP** and **hardware
@@ -179,13 +179,13 @@ Native formats from `ov02c10.c` (RAW10, all compiled):
 | Resolution | FPS | Notes |
 |------------|-----|-------|
 | 640 × 368 | 30 | **recommended** — ~16:9, ~98% FOV, 16-byte aligned (rotation safe) |
-| 640 × 480 | 30 | VGA 4:3 — ⚠️ 25% horizontal crop (1.33× zoom, 75% FOV) |
+| 640 × 480 | 30 | VGA 4:3 — 25% horizontal crop (1.33× zoom, 75% FOV) |
 | 800 × 600 | 30 | SVGA 4:3 — 25% horizontal crop |
 | 480 × 640 | 30 | portrait (270° rotation handled by LVGL) |
 | 1288 × 728 | 30 | near HD 16:9, full sensor downscaled by the ISP |
 | 1920 × 1080 | 30 | 1080P — full sensor, 100% FOV |
 
-> ❌ `960x540` is **disabled** (persistent watchdog) — use `800x600` or `1288x728`.
+> **Note:** `960x540` is disabled (persistent watchdog) — use `800x600` or `1288x728`.
 
 ```yaml
 esp_cam_sensor:
@@ -242,7 +242,7 @@ esp_cam_sensor:
   framerate: 30
 ```
 
-> 💡 For LVGL, prefer `pixel_format: RGB565`: it is the native format of the
+> **Tip:** For LVGL, prefer `pixel_format: RGB565`: it is the native format of the
 > LVGL `canvas`, which allows a zero-copy transfer without conversion.
 
 ## Camera display in LVGL (Canvas)
@@ -314,8 +314,8 @@ lvgl:
             pad_all: 0
 ```
 
-⚠️ **The `canvas` must have exactly the sensor resolution dimensions** (here
-640×480) otherwise the image will be cropped or distorted.
+**Important:** the `canvas` must have exactly the sensor resolution dimensions
+(here 640×480) otherwise the image will be cropped or distorted.
 
 ### Activation: `configure_canvas()`
 
