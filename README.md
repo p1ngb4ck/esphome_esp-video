@@ -24,15 +24,35 @@ Référencez ce dépôt comme source de composants externes :
 
 ```yaml
 external_components:
+  # Pilotes caméra + affichage (ce dépôt)
   - source:
       type: git
       url: https://github.com/youkorr/esphome_esp-video
     components: [esp_video, esp_cam_sensor, lvgl_camera_display]
     refresh: 0s
+
+  # LVGL 9.5 personnalisé — REQUIS par lvgl_camera_display (accélération PPA)
+  - source:
+      type: git
+      url: https://github.com/youkorr/lvgl_9.5
+      ref: main
+    components: [lvgl, image, font]
+    refresh: always
+
+  # Interface d'affichage MIPI-DSI (ESP32-P4)
+  - source: github://pr#13608
+    components: [mipi_dsi]
+    refresh: always
 ```
 
 > ⚠️ Ces composants ciblent l'**ESP32-P4** (`esp32` + framework `esp-idf`).
 > La PSRAM est obligatoire pour les buffers vidéo.
+
+> 🔗 **Dépendance LVGL obligatoire.** `lvgl_camera_display` recopie les images
+> dans un `canvas` LVGL via l'accélération matérielle **PPA**. Cela nécessite le
+> fork **LVGL 9.5** (`https://github.com/youkorr/lvgl_9.5`, licence MIT) — le
+> composant `lvgl` officiel d'ESPHome ne fournit pas `use_ppa`. Le dépôt
+> `lvgl_9.4` est obsolète et ne doit plus être utilisé.
 
 ### 1. Bus I²C
 
@@ -231,21 +251,24 @@ lvgl_camera_display:
 
 ### Widget Canvas dans LVGL
 
-⚠️ **Le `canvas` doit avoir exactement les dimensions de la résolution du
-capteur** (ici 640×480) sinon l'image sera tronquée ou déformée.
+Le bloc `lvgl` doit utiliser le fork **LVGL 9.5** avec l'accélération PPA :
 
 ```yaml
 lvgl:
+  use_ppa: true               # accélération matérielle PPA (fork LVGL 9.5)
+  byte_order: little_endian
   displays:
-    - display_id: my_display
+    - main_display
+  touchscreens:
+    - touch
   pages:
     - id: camera_page
       widgets:
         - canvas:
             id: camera_canvas
-            width: 640         # = largeur de la résolution capteur
-            height: 480        # = hauteur de la résolution capteur
-            x: 192             # position à l'écran
+            width: 640          # = largeur de la résolution capteur
+            height: 480         # = hauteur de la résolution capteur
+            x: 192              # position à l'écran
             y: 60
             bg_color: 0x000000
             border_width: 0
@@ -253,10 +276,39 @@ lvgl:
             pad_all: 0
 ```
 
+⚠️ **Le `canvas` doit avoir exactement les dimensions de la résolution du
+capteur** (ici 640×480) sinon l'image sera tronquée ou déformée.
+
 ### Activation : `configure_canvas()`
 
-Le canvas doit être lié au composant **après** l'initialisation de LVGL. Le plus
-simple est un interrupteur `template`, ou l'événement `on_load` de la page :
+Le canvas doit être lié au composant **une fois LVGL initialisé**. Trois
+déclencheurs possibles : `on_idle` de `lvgl` (méthode utilisée en production), un
+interrupteur `template`, ou l'`on_load` de la page.
+
+**Méthode recommandée — `on_idle` de LVGL** (le canvas est lié une seule fois) :
+
+```yaml
+lvgl:
+  use_ppa: true
+  byte_order: little_endian
+  displays:
+    - main_display
+  on_idle:
+    - timeout: 5s
+      then:
+        - lambda: |-
+            static bool canvas_configured = false;
+            if (!canvas_configured) {
+              auto canvas = id(camera_canvas);
+              if (canvas != nullptr) {
+                id(camera_display).configure_canvas(canvas);
+                canvas_configured = true;
+                ESP_LOGI("lvgl", "Canvas configuré pour caméra 640x480");
+              }
+            }
+```
+
+**Variante — interrupteur `template`** (active/désactive le flux à la demande) :
 
 ```yaml
 switch:
@@ -267,34 +319,15 @@ switch:
     optimistic: true
     turn_on_action:
       - lambda: |-
-          // 1) Lier le canvas (LVGL est prêt)
           auto canvas = id(camera_canvas);
           auto *disp = id(camera_display);
           if (canvas != nullptr && disp != nullptr) {
             disp->configure_canvas(canvas);
-            disp->set_enabled(true);     // 2) démarrer le rafraîchissement
+            disp->set_enabled(true);     // démarrer le rafraîchissement
           }
     turn_off_action:
       - lambda: |-
           id(camera_display).set_enabled(false);
-```
-
-Variante via `on_load` de la page (configuration au chargement de la page) :
-
-```yaml
-pages:
-  - id: camera_page
-    on_load:
-      - lambda: |-
-          auto canvas = id(camera_canvas);
-          if (canvas != nullptr) {
-            id(camera_display).configure_canvas(canvas);
-          }
-    widgets:
-      - canvas:
-          id: camera_canvas
-          width: 640
-          height: 480
 ```
 
 ## Exemple minimal complet
@@ -305,6 +338,16 @@ external_components:
       type: git
       url: https://github.com/youkorr/esphome_esp-video
     components: [esp_video, esp_cam_sensor, lvgl_camera_display]
+    refresh: 0s
+  - source:
+      type: git
+      url: https://github.com/youkorr/lvgl_9.5
+      ref: main
+    components: [lvgl, image, font]
+    refresh: always
+  - source: github://pr#13608
+    components: [mipi_dsi]
+    refresh: always
 
 psram:
   mode: hex
@@ -339,14 +382,23 @@ lvgl_camera_display:
   update_interval: 33ms
 
 lvgl:
+  use_ppa: true
+  byte_order: little_endian
   displays:
-    - display_id: my_display
+    - main_display
+  on_idle:
+    - timeout: 5s
+      then:
+        - lambda: |-
+            static bool canvas_configured = false;
+            if (!canvas_configured) {
+              if (id(camera_canvas) != nullptr) {
+                id(camera_display).configure_canvas(id(camera_canvas));
+                canvas_configured = true;
+              }
+            }
   pages:
     - id: camera_page
-      on_load:
-        - lambda: |-
-            if (id(camera_canvas) != nullptr)
-              id(camera_display).configure_canvas(id(camera_canvas));
       widgets:
         - canvas:
             id: camera_canvas
