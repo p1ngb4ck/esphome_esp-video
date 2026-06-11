@@ -38,12 +38,10 @@ external_components:
       ref: main
     components: [lvgl, image, font]
     refresh: always
-
-  # Interface d'affichage MIPI-DSI (ESP32-P4)
-  - source: github://pr#13608
-    components: [mipi_dsi]
-    refresh: always
 ```
+
+> ℹ️ Le composant `mipi_dsi` (affichage MIPI-DSI de l'ESP32-P4) est désormais
+> **intégré nativement à ESPHome** — aucun composant externe n'est nécessaire.
 
 > ⚠️ Ces composants ciblent l'**ESP32-P4** (`esp32` + framework `esp-idf`).
 > La PSRAM est obligatoire pour les buffers vidéo.
@@ -344,9 +342,6 @@ external_components:
       url: https://github.com/youkorr/lvgl_9.5
       ref: main
     components: [lvgl, image, font]
-    refresh: always
-  - source: github://pr#13608
-    components: [mipi_dsi]
     refresh: always
 
 psram:
