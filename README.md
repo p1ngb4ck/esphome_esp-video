@@ -8,7 +8,7 @@ ESP32 (en particulier l'**ESP32-P4** avec interface MIPI-CSI).
 
 | Composant | Rôle |
 |-----------|------|
-| `esp_video` | Pipeline vidéo (CSI / DVP / ISP / JPEG / H.264) basé sur le framework `esp_video` d'Espressif. Doit toujours être présent. |
+| `esp_video` | Pipeline vidéo (CSI / DVP / ISP / JPEG) basé sur le framework `esp_video` d'Espressif. Doit toujours être présent. |
 | `esp_cam_sensor` | Pilotes de capteurs caméra + transformations matérielles (PPA : crop / resize / rotation / miroir). |
 | `lvgl_camera_display` | Widget LVGL affichant le flux caméra en direct sur un `canvas`, avec superpositions de détection optionnelles. |
 
@@ -72,6 +72,12 @@ esp_video:
 | `enable_isp` | `true` | Active l'ISP (conversion RAW → RGB565) |
 | `use_heap_allocator` | `true` | Place les buffers vidéo en PSRAM |
 | `enable_xclk_init` | `false` | Génère XCLK via LEDC (cartes hors M5Stack) |
+
+> ℹ️ **L'encodeur H.264 est désactivé.** Le device matériel H.264 est compilé
+> sous `#if CONFIG_ESP_VIDEO_ENABLE_HW_H264_VIDEO_DEVICE`, flag jamais positionné
+> par le composant — `/dev/video11` n'est donc pas créé. Il n'existe pas d'option
+> `enable_h264` (elle serait rejetée à la validation). Seuls **ISP** et **JPEG
+> matériel** sont actifs.
 
 ### 3. Capteur : `esp_cam_sensor`
 
