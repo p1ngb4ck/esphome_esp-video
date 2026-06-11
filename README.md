@@ -102,7 +102,7 @@ esp_video:
 esp_cam_sensor:
   id: tab5_cam
   i2c_id: bsp_bus
-  sensor_type: ov5647       # ov5647 | ov02c10 | sc202cs
+  sensor_type: ov5647       # ov5647 | ov02c10 | sc202cs | sc2336
   resolution: "640x480"     # see per-sensor tables below
   pixel_format: "RGB565"    # RGB565 (zero-copy LVGL) | YUYV | UYVY | NV12 | JPEG | RAW8
   framerate: 30             # 1–60 fps
@@ -115,7 +115,7 @@ esp_cam_sensor:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `sensor_type` | `sc202cs` | `ov5647`, `ov02c10` or `sc202cs` (`sensor:` accepted as an alias) |
+| `sensor_type` | `sc202cs` | `ov5647`, `ov02c10`, `sc202cs` or `sc2336` (`sensor:` accepted as an alias) |
 | `i2c_id` | `0` | Shared I²C bus |
 | `lane` | `1` | Number of MIPI lanes (1–4) |
 | `xclk_pin` | `GPIO36` | XCLK pin |
@@ -143,34 +143,38 @@ Valid for all sensors (passed to the native driver):
 
 ## Supported sensors and resolutions
 
-Three sensors are fully validated (detection, ISP and white balance handled
-automatically through their registers and IPA JSON configuration).
+Four sensors are compiled into the driver. The tables below list every
+resolution that is actually wired into the build (driver format tables +
+`CONFIG_CAMERA_*` flags enabled in `esp_video_build.py`). White balance, ISP and
+detection are handled automatically through the sensor registers and IPA JSON
+configuration.
 
 ### OV5647 (MIPI 2-lane, 5 MP)
 
 Raspberry Pi Camera v1 type sensor. RAW output converted to RGB565 by the ISP.
+Native formats from `ov5647.c` (all compiled):
 
-| Resolution | FPS | Notes |
-|------------|-----|-------|
-| 640 × 480 | 30 | VGA (custom format) |
-| 800 × 600 | 50 | SVGA — smooth motion, ideal for 1024×600 displays |
-| 800 × 640 | 50 | native |
-| 800 × 800 | 50 | native RAW8 |
-| 1024 × 600 | 30 | custom format (wide displays) |
-| 1280 × 960 | 45 | native RAW10 |
-| 1920 × 1080 | 30 | native RAW10 (1080P) |
+| Resolution | FPS | Format | Notes |
+|------------|-----|--------|-------|
+| 800 × 640 | 50 | RAW8 | native |
+| 800 × 800 | 50 | RAW8 | native |
+| 800 × 1280 | 50 | RAW8 | native (portrait) |
+| 1280 × 960 | 45 | RAW10 | native, binning |
+| 1920 × 1080 | 30 | RAW10 | native (1080P) |
 
 ```yaml
 esp_cam_sensor:
   id: tab5_cam
   i2c_id: bsp_bus
   sensor_type: ov5647
-  resolution: "640x480"
+  resolution: "1280x960"
   pixel_format: "RGB565"
   framerate: 30
 ```
 
 ### OV02C10 (MIPI 1-lane, 2 MP)
+
+Native formats from `ov02c10.c` (RAW10, all compiled):
 
 | Resolution | FPS | Notes |
 |------------|-----|-------|
@@ -195,19 +199,45 @@ esp_cam_sensor:
 
 ### SC202CS (MIPI 1-lane, 2 MP)
 
-Native 1600 × 1200 sensor with 2×2 binning.
+Native 1600 × 1200 sensor with 2×2 binning. Formats from `sc202cs.c`
+(all compiled):
 
-| Resolution | FPS | Notes |
-|------------|-----|-------|
-| 800 × 600 | 30 | native RAW8 format, centered crop (recommended for small displays) |
-| 1280 × 720 | 30 | 720P (default driver format) |
+| Resolution | FPS | Format | Notes |
+|------------|-----|--------|-------|
+| 800 × 600 | 30 | RAW8 | centered crop (custom-applied, recommended for small displays) |
+| 1280 × 720 | 30 | RAW8 | 720P (default driver format) |
+| 1600 × 900 | 30 | RAW10 | 16:9 |
+| 1600 × 1200 | 30 | RAW8 / RAW10 | full resolution (UXGA) |
 
 ```yaml
 esp_cam_sensor:
   id: tab5_cam
   i2c_id: bsp_bus
   sensor_type: sc202cs
-  resolution: "800x600"
+  resolution: "1280x720"
+  pixel_format: "RGB565"
+  framerate: 30
+```
+
+### SC2336 (MIPI 1/2-lane, 2 MP)
+
+Resolutions enabled through the `CONFIG_CAMERA_SC2336_*` flags in
+`esp_video_build.py`:
+
+| Resolution | FPS | Format |
+|------------|-----|--------|
+| 640 × 480 | 50 | RAW10 |
+| 800 × 800 | 30 | RAW8 / RAW10 |
+| 1024 × 600 | 30 | RAW8 |
+| 1280 × 720 | 30 | RAW10 |
+| 1920 × 1080 | 30 | RAW10 |
+
+```yaml
+esp_cam_sensor:
+  id: tab5_cam
+  i2c_id: bsp_bus
+  sensor_type: sc2336
+  resolution: "1280x720"
   pixel_format: "RGB565"
   framerate: 30
 ```
