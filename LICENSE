@@ -1,6 +1,6 @@
 esphome_esp-video License
 
-Copyright (c) 2024-2026 youkorr (Sapphire Younes)
+Copyright (c) 2024-2026 youkorr
 
 The ORIGINAL ESPHome integration code in this repository — the Python
 configuration/codegen and the C++ glue that wires Espressif's video stack into
@@ -32,7 +32,7 @@ described in the NOTICE file.
 
 MIT License
 
-Copyright (c) 2024-2026 youkorr (Sapphire Younes)
+Copyright (c) 2024-2026 youkorr
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
