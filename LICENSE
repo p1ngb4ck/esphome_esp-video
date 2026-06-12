@@ -1,7 +1,37 @@
+esphome_esp-video License
+
+Copyright (c) 2024-2026 youkorr (Sapphire Younes)
+
+The ORIGINAL ESPHome integration code in this repository — the Python
+configuration/codegen and the C++ glue that wires Espressif's video stack into
+ESPHome (for example esp_video_component.*, esp_cam_sensor_camera.*,
+lvgl_camera_display.*, the *_custom_formats.h sensor tables, the build helpers
+and the __init__.py files) — is licensed under the MIT License (reproduced
+below).
+
+This repository ALSO bundles ("vendors") substantial third-party source code
+that is NOT licensed under MIT and is NOT relicensed by this file. Each such
+component remains governed by the license of its original copyright owner. In
+particular, the vendored Espressif Systems sources — the esp_video pipeline and
+the esp_cam_sensor / esp_ipa / esp_sccb_intf drivers, together with their src/,
+include/, private_include/, sensor/ trees and their idf_component / CMake /
+linker files — are licensed under the Apache License, Version 2.0, and carry
+their own SPDX headers. See the NOTICE file for the full list and
+LICENSES/Apache-2.0.txt for the Apache-2.0 text.
+
+These components are also ESPHome external components: they build on ESPHome,
+which is itself dual-licensed (Python under MIT, C++/runtime under GPLv3). A
+firmware compiled from this repository is a combined work and is, as a whole,
+subject to ESPHome's terms as well.
+
+When you build, distribute, or otherwise use this software you must comply with
+BOTH the MIT License below AND the licenses of the bundled / upstream components
+described in the NOTICE file.
+
+-------------------------------------------------------------------------------
+
 MIT License
 
-Copyright (c) 2024-2026 ESPHome
-Copyright (c) 2023-2026 Espressif Systems (Shanghai) CO LTD
 Copyright (c) 2024-2026 youkorr (Sapphire Younes)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
