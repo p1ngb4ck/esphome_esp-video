@@ -1,0 +1,58 @@
+esphome_esp-video — Third-party notices
+=======================================
+
+This repository provides ESPHome external components for video capture, camera
+sensor drivers and an LVGL camera display on Espressif ESP32 targets (especially
+the ESP32-P4). In addition to the original ESPHome integration code (under MIT,
+see the LICENSE file), it bundles ("vendors") source code from upstream projects.
+Each part keeps its own license. See LICENSES/Apache-2.0.txt for the full Apache
+License 2.0 text.
+
+--------------------------------------------------------------------------
+1. Espressif Systems (Shanghai) CO LTD
+--------------------------------------------------------------------------
+   Source : https://github.com/espressif/esp-video-components
+            (esp_video, esp_cam_sensor, esp_ipa, esp_sccb_intf)
+   License: Apache-2.0 (SPDX headers are present in the vendored files).
+   Copyright (c) Espressif Systems (Shanghai) CO LTD.
+
+   Vendored from / derived from Espressif's esp-video and esp_cam_sensor
+   frameworks, and remaining under Apache-2.0:
+     - components/esp_video/        (src/, include/, private_include/,
+                                      CMakeLists.txt, linker / idf_component files)
+     - components/esp_cam_sensor/   (src/, sensor/, include/, CMakeLists.txt,
+                                      linker.lf, project_include.cmake,
+                                      idf_component)
+     - components/esp_ipa/
+     - components/esp_sccb_intf/
+
+   youkorr's modifications on top (additional sensor format tables such as the
+   *_custom_formats.h files, build glue and the ESPHome wiring) are offered under
+   MIT; the underlying Espressif files keep their Apache-2.0 license and SPDX
+   headers. Modified Espressif files carry change notices as required by
+   Apache-2.0 section 4(b).
+
+--------------------------------------------------------------------------
+2. ESPHome
+--------------------------------------------------------------------------
+   Source : https://github.com/esphome/esphome
+   License: Dual — Python code under MIT, C++/runtime code (.c, .cpp, .h, .hpp,
+            .tcc, .ino) under GPLv3.
+   Copyright (c) 2019 ESPHome contributors.
+
+   The components here are ESPHome external components: their C++ (for example
+   esp_video_component.*, esp_cam_sensor_camera.*, lvgl_camera_display.*)
+   #includes ESPHome headers and subclasses ESPHome's Component, and their Python
+   uses ESPHome's codegen API. A firmware built from them is a combined work with
+   ESPHome and is, as a whole, subject to ESPHome's MIT/GPLv3 terms.
+
+--------------------------------------------------------------------------
+3. LVGL 9.5 fork (build-time dependency, not vendored)
+--------------------------------------------------------------------------
+   Source : https://github.com/youkorr/lvgl_9.5
+   License: MIT (with ESPHome's MIT/GPLv3 and bundled Apache-2.0 / MIT parts —
+            see that repository's own LICENSE and NOTICE).
+
+   lvgl_camera_display requires the LVGL 9.5 fork for its PPA hardware
+   acceleration. It is pulled separately as an external component (not vendored
+   in this repository).

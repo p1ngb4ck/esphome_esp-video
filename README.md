@@ -451,10 +451,17 @@ lvgl:
 
 ## License
 
-This project is released under the [MIT License](LICENSE).
+The **original ESPHome integration code** in this repository (the Python
+configuration/codegen and the C++ glue) is released under the
+[MIT License](LICENSE), Copyright (c) 2024-2026 youkorr.
 
-Copyright holders:
+This repository also **bundles third-party source code** that keeps its own
+license and is **not** relicensed as MIT:
 
-- ESPHome
-- Espressif Systems (Shanghai) CO LTD
-- youkorr (Sapphire Younes)
+- **Espressif** `esp_video` / `esp_cam_sensor` / `esp_ipa` / `esp_sccb_intf`
+  sources — **Apache-2.0** (Copyright © Espressif Systems (Shanghai) CO LTD).
+- **ESPHome** — the external-component framework these build on — **MIT/GPLv3**
+  (a compiled firmware is a combined work subject to ESPHome's terms).
+
+See [NOTICE](NOTICE) for the full breakdown and
+[LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) for the Apache-2.0 text.
