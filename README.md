@@ -453,7 +453,7 @@ lvgl:
 
 The **original ESPHome integration code** in this repository (the Python
 configuration/codegen and the C++ glue) is released under the
-[MIT License](LICENSE), Copyright (c) 2024-2026 youkorr (Sapphire Younes).
+[MIT License](LICENSE), Copyright (c) 2024-2026 youkorr.
 
 This repository also **bundles third-party source code** that keeps its own
 license and is **not** relicensed as MIT:
