@@ -11,10 +11,10 @@
 #include "esp_check.h"
 #include "esp_heap_caps.h"
 
-#include "esphome/components/usb_uvc/include/usb/uvc_host.h"
-#include "esphome/components/usb_uvc/private_include/uvc_frame_priv.h"
-#include "esphome/components/usb_uvc/private_include/uvc_types_priv.h"
-#include "esphome/components/usb_uvc/private_include/uvc_check_priv.h"
+#include "esphome/components/usb_uvc/usb/uvc_host.h"
+#include "esphome/components/usb_uvc/uvc_frame_priv.h"
+#include "esphome/components/usb_uvc/uvc_types_priv.h"
+#include "esphome/components/usb_uvc/uvc_check_priv.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"

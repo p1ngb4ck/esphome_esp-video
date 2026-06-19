@@ -9,11 +9,11 @@
 
 #include "esp_log.h"
 
-#include "esphome/components/usb_uvc/include/esp_private/uvc_stream.h" // For uvc_host_stream_pause()
-#include "esphome/components/usb_uvc/private_include/uvc_types_priv.h"
-#include "esphome/components/usb_uvc/private_include/uvc_check_priv.h"
-#include "esphome/components/usb_uvc/private_include/uvc_frame_priv.h"
-#include "esphome/components/usb_uvc/private_include/uvc_critical_priv.h"
+#include "esphome/components/usb_uvc/esp_private/uvc_stream.h" // For uvc_host_stream_pause()
+#include "esphome/components/usb_uvc/uvc_types_priv.h"
+#include "esphome/components/usb_uvc/uvc_check_priv.h"
+#include "esphome/components/usb_uvc/uvc_frame_priv.h"
+#include "esphome/components/usb_uvc/uvc_critical_priv.h"
 
 static const char *TAG = "uvc-isoc";
 
