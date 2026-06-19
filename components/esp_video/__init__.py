@@ -1,8 +1,8 @@
 """
-Composant ESPHome pour ESP-Video d'Espressif (v1.4.0)
-Support JPEG avec dépendances ESP-IDF
+ESPHome component for Espressif ESP-Video (v1.4.0)
+JPEG support with ESP-IDF dependencies
 
-Ce composant initialise ESP-Video en utilisant le bus I2C d'ESPHome.
+Initializes ESP-Video using the ESPHome I2C bus.
 """
 
 import esphome.codegen as cg
@@ -14,13 +14,13 @@ import os
 import logging
 
 CODEOWNERS = ["@youkorr"]
-DEPENDENCIES = ["esp32", "i2c"]  # i2c ajouté car nous utilisons le bus I2C ESPHome
+DEPENDENCIES = ["esp32", "i2c"]
 AUTO_LOAD = []
 
 esp_video_ns = cg.esphome_ns.namespace("esp_video")
 ESPVideoComponent = esp_video_ns.class_("ESPVideoComponent", cg.Component)
 
-# Configuration
+# Configuration keys
 CONF_ENABLE_JPEG = "enable_jpeg"
 CONF_ENABLE_ISP = "enable_isp"
 CONF_ENABLE_UVC = "enable_uvc"
@@ -29,32 +29,30 @@ CONF_XCLK_PIN = "xclk_pin"
 CONF_XCLK_FREQ = "xclk_freq"
 CONF_ENABLE_XCLK_INIT = "enable_xclk_init"
 
-# Constante pour indiquer qu'il n'y a pas d'horloge externe contrôlée par GPIO
-# Utilisez xclk_pin: -1 pour les cartes avec oscillateur externe sur le PCB
+# Use xclk_pin: -1 for boards with an external oscillator on the PCB
 NO_CLOCK = -1
 
 def parse_gpio_pin(value):
-    """Parse une pin GPIO au format ESPHome (GPIO36 ou -1)"""
+    """Parse a GPIO pin in ESPHome format (GPIO36 or -1)."""
     if isinstance(value, int):
         return value
     if isinstance(value, str):
         if value == "-1" or value.upper() == "NO_CLOCK":
             return NO_CLOCK
-        # Format "GPIO36" -> 36
+        # "GPIO36" -> 36
         if value.upper().startswith("GPIO"):
             try:
                 return int(value[4:])
             except ValueError:
-                raise cv.Invalid(f"Format GPIO invalide: {value}. Utilisez 'GPIO36' ou -1")
-        # Si c'est juste un nombre en string
+                raise cv.Invalid(f"Invalid GPIO format: {value}. Use 'GPIO36' or -1")
         try:
             return int(value)
         except ValueError:
-            raise cv.Invalid(f"Format GPIO invalide: {value}. Utilisez 'GPIO36' ou -1")
-    raise cv.Invalid(f"Type de pin invalide: {type(value)}")
+            raise cv.Invalid(f"Invalid GPIO format: {value}. Use 'GPIO36' or -1")
+    raise cv.Invalid(f"Invalid pin type: {type(value)}")
 
 def validate_esp_video_config(config):
-    """Valide la configuration ESP-Video"""
+    """Validate ESP-Video configuration."""
     return config
 
 
@@ -70,7 +68,7 @@ CONFIG_SCHEMA = cv.All(
         # connected UVC camera is enumerated as a /dev/videoN V4L2 device.
         cv.Optional(CONF_ENABLE_UVC, default=False): cv.boolean,
         cv.Optional(CONF_USE_HEAP_ALLOCATOR, default=True): cv.boolean,
-        # XCLK pin accepte: "GPIO36", 36, -1, ou "NO_CLOCK"
+        # XCLK pin accepts: "GPIO36", 36, -1, or "NO_CLOCK"
         cv.Optional(CONF_XCLK_PIN, default="GPIO36"): cv.Any(cv.string, cv.int_range(min=-1, max=48)),
         cv.Optional(CONF_XCLK_FREQ, default=24000000): cv.int_range(min=1000000, max=40000000),  # 1-40 MHz
         # Enable XCLK initialization via LEDC (for non-M5Stack boards)
@@ -81,29 +79,19 @@ CONFIG_SCHEMA = cv.All(
 
 
 async def to_code(config):
-    # -----------------------------------------------------------------------
-    # Vérification du framework (CRITICAL: faire ça en premier)
-    # -----------------------------------------------------------------------
-    if not CORE.using_toolchain_esp_idf:
+    # ESP-IDF is required; Arduino framework is not supported
+    if CORE.using_arduino:
         raise cv.Invalid(
-            "ESP-Video nécessite le framework esp-idf. "
-            "Ajoutez 'framework: type: esp-idf' dans votre configuration."
+            "ESP-Video requires the esp-idf framework. "
+            "Add 'framework: type: esp-idf' to your configuration."
         )
-
-    # ============================================================================
-    # AUTO-DOWNLOAD DES DÉPENDANCES (comme LVGL 9.4 avec cg.add_library)
-    # ============================================================================
-    # LVGL fait: cg.add_library("lvgl/lvgl", "9.4.0")
-    # ESP-Video fait: Auto-download depuis esp-adf-libs
 
     component_dir = os.path.dirname(__file__)
     parent_components_dir = os.path.dirname(component_dir)
 
-    # Importer le module de téléchargement
+    # Auto-download missing dependencies
     from .esp_video_download import ensure_esp_video_dependencies
 
-    # Télécharger automatiquement les dépendances manquantes
-    # (Si les composants existent déjà, cette fonction ne fait rien)
     try:
         ensure_esp_video_dependencies(parent_components_dir)
     except Exception as e:
@@ -112,25 +100,18 @@ async def to_code(config):
             f"If components are already present locally, this is OK."
         )
 
-    # ============================================================================
-    # Configuration du composant
-    # ============================================================================
-
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
 
-    # Récupérer le bus I2C d'ESPHome
     i2c_bus = await cg.get_variable(config[CONF_I2C_ID])
     cg.add(var.set_i2c_bus(i2c_bus))
 
-    # Configure XCLK pour la détection des capteurs MIPI-CSI
-    # CRITICAL: Les capteurs ont besoin de XCLK actif pour répondre sur I2C!
+    # CRITICAL: sensors need an active XCLK to respond on I2C
     xclk_pin_raw = config[CONF_XCLK_PIN]
-    xclk_pin = parse_gpio_pin(xclk_pin_raw)  # Convertit "GPIO36" -> 36, ou "-1" -> -1
+    xclk_pin = parse_gpio_pin(xclk_pin_raw)
     xclk_freq = config[CONF_XCLK_FREQ]
     has_ext_clock = xclk_pin != NO_CLOCK
 
-    # Cast explicite en gpio_num_t pour éviter l'erreur de compilation
     cg.add(var.set_xclk_pin(cg.RawExpression(f"static_cast<gpio_num_t>({xclk_pin})")))
     cg.add(var.set_xclk_freq(xclk_freq))
     cg.add(var.set_enable_xclk_init(config[CONF_ENABLE_XCLK_INIT]))
@@ -143,28 +124,17 @@ async def to_code(config):
     if config[CONF_ENABLE_UVC]:
         esp32.add_idf_component(name="espressif/usb_host_uvc", ref="2.4.1")
 
-    # Logs silencieux sauf erreurs
     logging.debug(f"[ESP-Video] I2C bus: '{config[CONF_I2C_ID]}'")
     if has_ext_clock:
         logging.debug(f"[ESP-Video] XCLK: GPIO{xclk_pin} @ {xclk_freq/1000000:.1f} MHz")
     else:
         logging.debug(f"[ESP-Video] XCLK: PCB oscillator @ {xclk_freq/1000000:.1f} MHz")
 
-    # -----------------------------------------------------------------------
-    # Chemins des composants ESP-IDF
-    # -----------------------------------------------------------------------
-    # Chemin du composant esp_video
-    component_dir = os.path.dirname(__file__)
-    parent_components_dir = os.path.dirname(component_dir)
-
-    # -----------------------------------------------------------------------
-    # Ajout des répertoires include
-    # -----------------------------------------------------------------------
+    # Add include directories
     includes_found = False
 
     # esp_video
-    esp_video_includes = ["include", "private_include", "src"]
-    for inc in esp_video_includes:
+    for inc in ["include", "private_include", "src"]:
         inc_path = os.path.join(component_dir, inc)
         if os.path.exists(inc_path):
             cg.add_build_flag(f"-I{inc_path}")
@@ -203,23 +173,20 @@ async def to_code(config):
             "Check ESP-Video component structure."
         )
 
-    # -----------------------------------------------------------------------
-    # FLAGS ESP-Video selon la configuration
-    # -----------------------------------------------------------------------
+    # Build flags
     flags = []
 
-    # Flags de base (toujours activés)
+    # Base flags (always enabled)
     flags.extend([
         "-DCONFIG_ESP_VIDEO_ENABLE_MIPI_CSI_VIDEO_DEVICE=1",
         "-DCONFIG_IDF_TARGET_ESP32P4=1",
         "-DCONFIG_SOC_I2C_SUPPORTED=1",
     ])
 
-    # Capteurs de caméra - configurations pour TOUS les capteurs supportés
-    # L'auto-détection essaiera tous les capteurs et utilisera celui détecté
+    # Camera sensors — auto-detection will probe all and use whichever responds
 
-    # SC202CS - Configuration identique à M5Stack Tab5
-    # Digital gain priority recommandé pour éviter le bruit à faible lumière
+    # SC202CS — matches M5Stack Tab5 configuration
+    # Digital gain priority recommended to reduce noise in low light
     flags.extend([
         "-DCONFIG_CAMERA_SC202CS=1",
         "-DCONFIG_CAMERA_SC202CS_AUTO_DETECT=1",
@@ -246,12 +213,12 @@ async def to_code(config):
         "-DCONFIG_CAMERA_OV02C10_AUTO_DETECT=1",
         "-DCONFIG_CAMERA_OV02C10_AUTO_DETECT_MIPI_INTERFACE_SENSOR=1",
         "-DCONFIG_CAMERA_OV02C10_ABSOLUTE_GAIN_LIMIT=16000",  # 16x max
-        "-DCONFIG_CAMERA_OV02C10_ANA_GAIN_PRIORITY=1",         # Analog gain priority
+        "-DCONFIG_CAMERA_OV02C10_ANA_GAIN_PRIORITY=1",        # Analog gain priority
         "-DCONFIG_CAMERA_OV02C10_DIG_GAIN_PRIORITY=0",
         "-DCONFIG_CAMERA_OV02C10_CSI_LINESYNC_ENABLE=0",
         "-DCONFIG_CAMERA_OV02C10_MIPI_IF_FORMAT_INDEX_DEFAULT=0",
         "-DCONFIG_CAMERA_OV02C10_MAX_SUPPORT=1",
-        "-DCONFIG_CAMERA_OV02C10_DEFAULT_IPA_JSON_CONFIGURATION_FILE=1",  # Utiliser cfg/ov02c10_default.json
+        "-DCONFIG_CAMERA_OV02C10_DEFAULT_IPA_JSON_CONFIGURATION_FILE=1",  # Use cfg/ov02c10_default.json
     ])
 
     # ISP (Image Signal Processor)
@@ -260,60 +227,38 @@ async def to_code(config):
             "-DCONFIG_ESP_VIDEO_ENABLE_ISP=1",
             "-DCONFIG_ESP_VIDEO_ENABLE_ISP_VIDEO_DEVICE=1",
             "-DCONFIG_ESP_VIDEO_ENABLE_ISP_PIPELINE_CONTROLLER=1",
-            "-DESP_VIDEO_ISP_ENABLED=1",  # Pour esp_video_component.cpp
+            "-DESP_VIDEO_ISP_ENABLED=1",  # Used in esp_video_component.cpp
         ])
 
     # USB-UVC host video device (external USB camera on the P4 USB OTG port)
     if config[CONF_ENABLE_UVC]:
         flags.append("-DCONFIG_ESP_VIDEO_ENABLE_USB_UVC_VIDEO_DEVICE=1")
 
-    # Allocateur mémoire
+    # Memory allocator
     if config[CONF_USE_HEAP_ALLOCATOR]:
         flags.append("-DCONFIG_ESP_VIDEO_USE_HEAP_ALLOCATOR=1")
 
-    # Encodeur JPEG
+    # JPEG encoder
     if config[CONF_ENABLE_JPEG]:
         flags.extend([
             "-DCONFIG_ESP_VIDEO_ENABLE_JPEG_VIDEO_DEVICE=1",
             "-DCONFIG_ESP_VIDEO_ENABLE_HW_JPEG_VIDEO_DEVICE=1",
-            "-DESP_VIDEO_JPEG_ENABLED=1",  # Pour esp_video_component.cpp
+            "-DESP_VIDEO_JPEG_ENABLED=1",  # Used in esp_video_component.cpp
         ])
 
-    # Appliquer tous les flags
     for flag in flags:
         cg.add_build_flag(flag)
 
-    extra_flags = [
+    for flag in [
         "-Wno-unused-function",
         "-Wno-unused-variable",
         "-Wno-missing-field-initializers",
-    ]
-
-    for flag in extra_flags:
+    ]:
         cg.add_build_flag(flag)
 
-    # -----------------------------------------------------------------------
-    # Script de build PlatformIO (obligatoire)
-    # -----------------------------------------------------------------------
+    # PlatformIO build script (required)
     build_script_path = os.path.join(component_dir, "esp_video_build.py")
     if os.path.exists(build_script_path):
         cg.add_platformio_option("extra_scripts", [f"post:{build_script_path}"])
     else:
-        raise cv.Invalid(f"Script de build introuvable: {build_script_path}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        raise cv.Invalid(f"Build script not found: {build_script_path}")
