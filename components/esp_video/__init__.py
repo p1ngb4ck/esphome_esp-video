@@ -120,7 +120,6 @@ async def to_code(config):
     # USB-UVC: the usb_uvc component owns USB host init and pulls the IDF UVC
     # driver. esp_video only validates that usb_uvc is present in the config.
     if config[CONF_ENABLE_UVC]:
-        from esphome.core import CORE
         if "usb_uvc" not in CORE.config:
             raise cv.Invalid(
                 "enable_uvc: true requires a 'usb_uvc:' entry in your configuration. "
