@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components.esp32 import add_idf_component, only_on_variant
+from esphome.components.esp32 import only_on_variant
 from esphome.components.esp32 import VARIANT_ESP32P4, VARIANT_ESP32S2, VARIANT_ESP32S3
 from esphome.components.usb_host import USBClient, register_usb_client
 
@@ -40,11 +40,6 @@ CONFIG_SCHEMA = cv.ensure_list(_SINGLE_SCHEMA)
 
 
 async def to_code(config):
-    # Pull the Espressif USB Host UVC driver from the ESP Component Registry.
-    # Provides usb/uvc_host.h and the UVC device enumeration stack.
-    # Only this component pulls it — esp_video does not.
-    add_idf_component(name="espressif/usb_host_uvc", ref="2.4.1")
-
     for device in config:
         var = await register_usb_client(device)
         cg.add(var.set_uvc_dev_num(device[CONF_UVC_DEV_NUM]))
