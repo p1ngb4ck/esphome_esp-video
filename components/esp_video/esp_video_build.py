@@ -119,6 +119,12 @@ if os.path.exists(esp_cam_sensor_dir):
             env.Append(CPPPATH=[inc_path])
             print(f"[ESP-Video Build] Include sensor ajouté: {inc_path}")
 
+# usb_uvc: uvc_host.h and uvc_esp_video.h live here
+usb_uvc_dir = os.path.join(parent_components_dir, "usb_uvc")
+if os.path.exists(usb_uvc_dir):
+    env.Append(CPPPATH=[usb_uvc_dir])
+    print(f"[ESP-Video Build] Added usb_uvc include: {usb_uvc_dir}")
+
     # Compiler les sources
     for src in esp_cam_sensor_sources:
         src_path = os.path.join(esp_cam_sensor_dir, src)
