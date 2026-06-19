@@ -11,12 +11,12 @@
 
 #include "esp_check.h"
 
-#include "uvc_control.h"
+#include "esphome/components/usb_uvc/include/esp_private/uvc_control.h"
 #include "usb/usb_types_ch9.h"
-#include "usb_types_uvc.h"
-#include "uvc_types_priv.h"
-#include "uvc_descriptors_priv.h"
-#include "uvc_check_priv.h"
+#include "esphome/components/usb_uvc/private_include/usb_types_uvc.h"
+#include "esphome/components/usb_uvc/private_include/uvc_types_priv.h"
+#include "esphome/components/usb_uvc/private_include/uvc_descriptors_priv.h"
+#include "esphome/components/usb_uvc/private_include/uvc_check_priv.h"
 
 #define FLOAT_EQUAL(a, b) (fabsf(a - b) < 0.0001f) // For comparing float values with acceptable difference (epsilon value)
 

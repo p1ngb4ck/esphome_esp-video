@@ -8,9 +8,9 @@
 #include <string.h> // strncmp for guid format parsing
 #include <math.h>   // fabsf for float comparison
 #include "usb/usb_helpers.h"
-#include "usb/uvc_host.h"
-#include "uvc_check_priv.h"
-#include "uvc_descriptors_priv.h"
+#include "esphome/components/usb_uvc/include/usb/uvc_host.h"
+#include "esphome/components/usb_uvc/private_include/uvc_check_priv.h"
+#include "esphome/components/usb_uvc/private_include/uvc_descriptors_priv.h"
 
 #define FLOAT_EQUAL(a, b) (fabsf(a - b) < 0.0001f) // For comparing float values with acceptable difference (epsilon value)
 

@@ -11,8 +11,8 @@
 #include <sys/queue.h>
 
 #include "usb/usb_host.h"
-#include "usb/uvc_host.h"
-#include "usb_types_uvc.h"
+#include "esphome/components/usb_uvc/include/usb/uvc_host.h"
+#include "esphome/components/usb_uvc/private_include/usb_types_uvc.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"

@@ -8,8 +8,8 @@
 #include <string.h>
 
 #include "usb/usb_host.h"
-#include "usb/uvc_host.h"
-#include "uvc_types_priv.h"
+#include "esphome/components/usb_uvc/include/usb/uvc_host.h"
+#include "esphome/components/usb_uvc/private_include/uvc_types_priv.h"
 
 #define TERMINAL_INPUT_CAMERA_TYPE      0x0201
 #define TERMINAL_INPUT_COMPOSITE_TYPE   0x0401

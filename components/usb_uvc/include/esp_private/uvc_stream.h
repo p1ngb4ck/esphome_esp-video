@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "usb/uvc_host.h"
+#include "esphome/components/usb_uvc/include/usb/uvc_host.h"
 
 #ifdef __cplusplus
 extern "C" {
