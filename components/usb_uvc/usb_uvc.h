@@ -22,7 +22,7 @@ typedef struct {
     int8_t task_affinity;    /*!< UVC host driver task core affinity, -1 = no affinity */
 
     // Outputs — filled by esp_video_install_usb_uvc_driver()
-    uvc_host_driver_event_cb_t event_cb;  /*!< Callback to pass to uvc_host_install() */
+    uvc_host_driver_event_callback_t event_cb;  /*!< Callback to pass to uvc_host_install() */
     void *event_cb_ctx;                   /*!< Context pointer for event_cb */
 } esp_video_uvc_driver_config_t;
 
