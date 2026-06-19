@@ -8,6 +8,10 @@
 
 #include <stdbool.h>
 #include "usb/usb_host.h"
+
+#ifndef CONFIG_UVC_INTERVAL_ARRAY_SIZE
+#define CONFIG_UVC_INTERVAL_ARRAY_SIZE 3
+#endif
 #include "esp_err.h"
 
 /** @brief Wildcard vendor ID for opening a UVC stream. */
