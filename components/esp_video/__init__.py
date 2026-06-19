@@ -235,10 +235,6 @@ async def to_code(config):
     # USB-UVC host video device (external USB camera on the P4 USB OTG port)
     if config[CONF_ENABLE_UVC]:
         flags.append("-DCONFIG_ESP_VIDEO_ENABLE_USB_UVC_VIDEO_DEVICE=1")
-        # uvc_host.h and uvc_esp_video.h live in the ESPHome usb_uvc component dir
-        usb_uvc_dir = os.path.join(parent_components_dir, "usb_uvc")
-        if os.path.exists(usb_uvc_dir):
-            cg.add_build_flag(f"-I{usb_uvc_dir}")
 
     # Memory allocator
     if config[CONF_USE_HEAP_ALLOCATOR]:

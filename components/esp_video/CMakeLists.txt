@@ -31,6 +31,11 @@ if(CONFIG_ESP_VIDEO_ENABLE_ISP)
     list(APPEND srcs "src/esp_video_isp_pipeline.c")
 endif()
 
+if(CONFIG_ESP_VIDEO_ENABLE_USB_UVC_VIDEO_DEVICE)
+    list(APPEND srcs "src/device/esp_video_usb_uvc_device.c")
+    list(APPEND priv_requires "usb_uvc")
+endif()
+
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${include_dirs}
                        PRIV_INCLUDE_DIRS ${priv_include_dirs}
