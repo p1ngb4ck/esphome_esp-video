@@ -30,7 +30,7 @@
 #include "esp_video_device.h"
 #include "esp_video_device_internal.h"
 #include "esp_video_ioctl.h"
-#include "usb_uvc.h"
+#include "esphome/components/usb_uvc/usb_uvc.h"
 
 #define UVC_NAME_PREFIX    "USB-UVC"
 
