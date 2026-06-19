@@ -5,7 +5,7 @@
 #include "freertos/semphr.h"
 #include "freertos/event_groups.h"
 #include "usb/usb_host.h"
-#include "esphome/components/usb_uvc/usb/uvc_host.h"
+#include "esphome/components/usb_uvc/uvc_host.h"
 
 /* Forward declaration — full definition is in uvc_types_priv.h */
 struct uvc_host_stream_s;

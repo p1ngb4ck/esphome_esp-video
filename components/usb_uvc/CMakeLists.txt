@@ -10,10 +10,7 @@ idf_component_register(
         "uvc_bulk.c"
         "usb_uvc_component.cpp"
     INCLUDE_DIRS
-        "include"
-    PRIV_INCLUDE_DIRS
-        "private_include"
-        "include/esp_private"
+        "."
     REQUIRES
         usb
         esp_video

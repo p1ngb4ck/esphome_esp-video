@@ -19,7 +19,7 @@
 #include "freertos/semphr.h"
 #include "freertos/event_groups.h"
 #include "usb/usb_host.h"
-#include "esphome/components/usb_uvc/usb/uvc_host.h"
+#include "esphome/components/usb_uvc/uvc_host.h"
 #include "esphome/components/usb_uvc/uvc_driver_priv.h"
 #include "esphome/components/usb_uvc/usb_uvc.h"
 

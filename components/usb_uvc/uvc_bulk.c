@@ -9,7 +9,7 @@
 
 #include "esp_log.h"
 
-#include "esphome/components/usb_uvc/esp_private/uvc_stream.h" // For uvc_host_stream_pause()
+#include "esphome/components/usb_uvc/uvc_stream.h" // For uvc_host_stream_pause()
 #include "esphome/components/usb_uvc/uvc_types_priv.h"
 #include "esphome/components/usb_uvc/uvc_check_priv.h"
 #include "esphome/components/usb_uvc/uvc_frame_priv.h"

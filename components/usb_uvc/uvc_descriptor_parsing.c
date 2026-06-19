@@ -8,7 +8,7 @@
 #include <string.h> // strncmp for guid format parsing
 #include <math.h>   // fabsf for float comparison
 #include "usb/usb_helpers.h"
-#include "esphome/components/usb_uvc/usb/uvc_host.h"
+#include "esphome/components/usb_uvc/uvc_host.h"
 #include "esphome/components/usb_uvc/uvc_check_priv.h"
 #include "esphome/components/usb_uvc/uvc_descriptors_priv.h"
 

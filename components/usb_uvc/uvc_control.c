@@ -11,7 +11,7 @@
 
 #include "esp_check.h"
 
-#include "esphome/components/usb_uvc/esp_private/uvc_control.h"
+#include "esphome/components/usb_uvc/uvc_control.h"
 #include "usb/usb_types_ch9.h"
 #include "esphome/components/usb_uvc/usb_types_uvc.h"
 #include "esphome/components/usb_uvc/uvc_types_priv.h"
