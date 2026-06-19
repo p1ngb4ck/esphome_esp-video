@@ -30,6 +30,7 @@
 #include "esp_video_device.h"
 #include "esp_video_device_internal.h"
 #include "esp_video_ioctl.h"
+#include "usb_uvc.h"
 
 #define UVC_NAME_PREFIX    "USB-UVC"
 
@@ -556,7 +557,7 @@ static const struct esp_video_ops s_uvc_video_ops = {
     .enum_frameintervals = uvc_video_enum_frameintervals,
 };
 
-esp_err_t esp_video_install_usb_uvc_driver(const esp_video_usb_uvc_device_config_t *cfg)
+esp_err_t esp_video_install_usb_uvc_driver(esp_video_uvc_driver_config_t *cfg)
 {
     esp_err_t ret;
     struct uvc_video_core *core;
@@ -570,6 +571,7 @@ esp_err_t esp_video_install_usb_uvc_driver(const esp_video_usb_uvc_device_config
     ESP_RETURN_ON_FALSE(core, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for uvc_video_core");
 
     core->uvc_video_num = cfg->uvc_dev_num;
+    core->lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
 
     for (int i = 0; i < cfg->uvc_dev_num; i++) {
         char name[12];
@@ -583,19 +585,13 @@ esp_err_t esp_video_install_usb_uvc_driver(const esp_video_usb_uvc_device_config
         ESP_GOTO_ON_FALSE(video[i], ESP_ERR_NO_MEM, fail0, TAG, "Failed to create esp_video");
     }
 
-    core->lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
-
-    const uvc_host_driver_config_t driver_config = {
-        .driver_task_stack_size = cfg->task_stack,
-        .driver_task_priority = cfg->task_priority,
-        .xCoreID = cfg->task_affinity >= 0 ? cfg->task_affinity : tskNO_AFFINITY,
-        .create_background_task = true,
-        .event_cb = uvc_host_driver_event_callback,
-        .user_ctx = core,
-    };
-    ESP_GOTO_ON_ERROR(uvc_host_install(&driver_config), fail0, TAG, "Failed to install UVC host driver");
-
     s_uvc_video_core = core;
+
+    // Return the event callback and context so the caller (usb_uvc component)
+    // can pass them to uvc_host_install(). This is the only way uvc_host can
+    // signal the esp_video pipeline when a UVC device connects.
+    cfg->event_cb = uvc_host_driver_event_callback;
+    cfg->event_cb_ctx = core;
 
     return ESP_OK;
 
@@ -605,7 +601,6 @@ fail0:
             if (core->uvc_video[i].ready_sem) {
                 vSemaphoreDelete(core->uvc_video[i].ready_sem);
             }
-
             esp_video_destroy(video[i]);
         }
     }
@@ -641,7 +636,7 @@ esp_err_t esp_video_uninstall_usb_uvc_driver(void)
         s_uvc_video_core = NULL;
     }
 
-    return uvc_host_uninstall();
+    return ESP_OK;
 }
 
 #endif /* CONFIG_ESP_VIDEO_ENABLE_USB_UVC_VIDEO_DEVICE */

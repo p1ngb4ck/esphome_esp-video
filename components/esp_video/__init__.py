@@ -117,12 +117,15 @@ async def to_code(config):
     cg.add(var.set_enable_xclk_init(config[CONF_ENABLE_XCLK_INIT]))
     cg.add(var.set_enable_uvc(config[CONF_ENABLE_UVC]))
 
-    # USB-UVC host: pull Espressif's USB Host UVC driver (native 2.x API, P4
-    # support) which also provides the esp_private/uvc_esp_video.h glue the
-    # esp_video UVC device driver builds against. Only when enabled, so MIPI-only
-    # builds don't grow the USB host stack.
+    # USB-UVC: the usb_uvc component owns USB host init and pulls the IDF UVC
+    # driver. esp_video only validates that usb_uvc is present in the config.
     if config[CONF_ENABLE_UVC]:
-        esp32.add_idf_component(name="espressif/usb_host_uvc", ref="2.4.1")
+        from esphome.core import CORE
+        if "usb_uvc" not in CORE.config:
+            raise cv.Invalid(
+                "enable_uvc: true requires a 'usb_uvc:' entry in your configuration. "
+                "The usb_uvc component manages USB host and UVC driver initialization."
+            )
 
     logging.debug(f"[ESP-Video] I2C bus: '{config[CONF_I2C_ID]}'")
     if has_ext_clock:
