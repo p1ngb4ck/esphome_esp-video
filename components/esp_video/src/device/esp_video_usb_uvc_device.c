@@ -23,8 +23,8 @@
 #include "freertos/semphr.h"
 
 #include "usb/usb_host.h"
-#include "usb/uvc_host.h"
-#include "esp_private/uvc_esp_video.h"
+#include "uvc_host.h"
+#include "uvc_esp_video.h"
 
 #include "esp_video.h"
 #include "esp_video_device.h"
