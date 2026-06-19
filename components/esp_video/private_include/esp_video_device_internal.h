@@ -56,7 +56,7 @@ typedef struct esp_video_spi_device_config {
 #endif
 
 #if CONFIG_ESP_VIDEO_ENABLE_USB_UVC_VIDEO_DEVICE
-#include "usb_uvc.h"
+#include "esphome/components/usb_uvc/usb_uvc.h"
 #endif
 
 #if CONFIG_ESP_VIDEO_ENABLE_MIPI_CSI_VIDEO_DEVICE
