@@ -31,7 +31,6 @@
 #include "esp_attr.h"
 #include "esp_check.h"
 #include "esp_private/esp_cache_private.h"
-#include "esp_ldo_regulator.h"
 #include "esp_cam_ctlr.h"
 #include "esp_cam_ctlr_csi.h"
 
@@ -48,9 +47,6 @@
 #define CONFIG_ESP_VIDEO_DISABLE_MIPI_CSI_DRIVER_BACKUP_BUFFER 1
 
 #define CSI_NAME                    "MIPI-CSI"
-
-#define CSI_LDO_UNIT_ID             3
-#define CSI_LDO_CFG_VOL_MV          2500
 
 #if CONFIG_SPIRAM
 #define CSI_MEM_CAPS                (MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM | MALLOC_CAP_CACHE_ALIGNED)
@@ -73,8 +69,6 @@ struct csi_video {
     esp_video_csi_state_t state;
 
     esp_cam_ctlr_handle_t cam_ctrl_handle;
-    esp_ldo_channel_handle_t ldo_handle;
-
 #if CONFIG_ESP_VIDEO_DISABLE_MIPI_CSI_DRIVER_BACKUP_BUFFER
     struct esp_video_buffer_element *element;
 #endif
@@ -381,13 +375,7 @@ static esp_err_t init_config(struct esp_video *video)
 static esp_err_t csi_video_init(struct esp_video *video)
 {
     esp_err_t ret;
-    esp_ldo_channel_config_t ldo_cfg = {
-        .chan_id = CSI_LDO_UNIT_ID,
-        .voltage_mv = CSI_LDO_CFG_VOL_MV,
-    };
     struct csi_video *csi_video = VIDEO_PRIV_DATA(struct csi_video *, video);
-
-    ESP_RETURN_ON_ERROR(esp_ldo_acquire_channel(&ldo_cfg, &csi_video->ldo_handle), TAG, "failed to init LDO");
 
     ESP_GOTO_ON_ERROR(esp_cam_sensor_set_format(csi_video->cam.sensor, NULL), fail_0, TAG, "failed to set basic format");
     ESP_GOTO_ON_ERROR(init_config(video), fail_0, TAG, "failed to initialize config");
@@ -395,8 +383,6 @@ static esp_err_t csi_video_init(struct esp_video *video)
     return ESP_OK;
 
 fail_0:
-    esp_ldo_release_channel(csi_video->ldo_handle);
-    csi_video->ldo_handle = NULL;
     return ret;
 }
 
@@ -494,16 +480,6 @@ static esp_err_t csi_video_stop(struct esp_video *video, uint32_t type)
         csi_video->swap_short = NULL;
     }
 #endif
-
-    return ESP_OK;
-}
-
-static esp_err_t csi_video_deinit(struct esp_video *video)
-{
-    struct csi_video *csi_video = VIDEO_PRIV_DATA(struct csi_video *, video);
-
-    ESP_RETURN_ON_ERROR(esp_ldo_release_channel(csi_video->ldo_handle), TAG, "failed to release LDO");
-    csi_video->ldo_handle = NULL;
 
     return ESP_OK;
 }
@@ -696,7 +672,6 @@ static esp_err_t csi_video_set_parm(struct esp_video *video, struct v4l2_streamp
 
 static const struct esp_video_ops s_csi_video_ops = {
     .init          = csi_video_init,
-    .deinit        = csi_video_deinit,
     .start         = csi_video_start,
     .stop          = csi_video_stop,
     .enum_format   = csi_video_enum_format,
