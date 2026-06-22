@@ -1,0 +1,62 @@
+menu "ESP Video Configuration"
+
+    config ESP_VIDEO_ENABLE_MIPI_CSI_VIDEO_DEVICE
+        bool "Enable MIPI-CSI video device"
+        default y
+        depends on SOC_MIPI_CSI_SUPPORTED
+        help
+            Enable support for MIPI CSI-2 camera input video device.
+
+    config ESP_VIDEO_ENABLE_DVP_VIDEO_DEVICE
+        bool "Enable DVP video device"
+        default n
+        depends on SOC_LCDCAM_CAM_SUPPORTED
+        help
+            Enable support for DVP (Digital Video Port) camera input video device.
+
+    config ESP_VIDEO_ENABLE_JPEG_VIDEO_DEVICE
+        bool "Enable JPEG hardware encoder video device"
+        default y
+        depends on SOC_JPEG_ENCODE_SUPPORTED
+        help
+            Enable support for hardware JPEG encoder video device.
+
+    config ESP_VIDEO_ENABLE_ISP
+        bool "Enable Image Signal Processor (ISP)"
+        default y
+        depends on SOC_ISP_SUPPORTED
+        help
+            Enable the Image Signal Processor pipeline for RAW sensor demosaicing,
+            colour correction, and other image quality algorithms.
+
+    config ESP_VIDEO_ENABLE_ISP_VIDEO_DEVICE
+        bool "Enable ISP video device"
+        default y
+        depends on ESP_VIDEO_ENABLE_ISP
+        help
+            Register the ISP pipeline as a V4L2 video device node.
+
+    config ESP_VIDEO_ENABLE_ISP_PIPELINE_CONTROLLER
+        bool "Enable ISP pipeline controller"
+        default y
+        depends on ESP_VIDEO_ENABLE_ISP
+        help
+            Enable the ISP pipeline controller for automatic IPA algorithm scheduling.
+
+    config ESP_VIDEO_USE_HEAP_ALLOCATOR
+        bool "Use heap allocator for video buffers"
+        default y
+        help
+            Use the heap allocator (MALLOC_CAP_SPIRAM) for video frame buffers
+            instead of DMA-capable internal RAM.
+
+    config ESP_VIDEO_DISABLE_MIPI_CSI_DRIVER_BACKUP_BUFFER
+        bool "Disable MIPI-CSI driver backup buffer"
+        default y
+        depends on ESP_VIDEO_ENABLE_MIPI_CSI_VIDEO_DEVICE
+        help
+            Disable the CSI driver backup buffer allocation. With USERPTR mode and
+            pre-allocated SPIRAM buffers this backup buffer is redundant and wastes
+            a full frame of memory (can be several MB at high resolutions).
+
+endmenu

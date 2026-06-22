@@ -30,7 +30,8 @@ idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${include_dirs}
                        PRIV_INCLUDE_DIRS ${priv_include_dirs}
                        REQUIRES ${requires}
-                       PRIV_REQUIRES ${priv_requires})
+                       PRIV_REQUIRES ${priv_requires}
+                       LDFRAGMENTS "linker.lf")
 
 # SC202CS configuration - Match M5Stack Tab5 settings
 # These flags MUST be set here to be compiled into the driver
