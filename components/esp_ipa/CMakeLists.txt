@@ -12,6 +12,10 @@ idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${include_dirs}
                        REQUIRES json esp_video)
 
+# Force-link esp_ipa_detect_stubs.c object so __esp_ipa_detect_array_start/end
+# are not GC'd. libesp_ipa.a references these as undefined symbols.
+target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __esp_ipa_detect_array_start")
+
 idf_build_get_property(idf_target IDF_TARGET)
 
 # Link prebuilt IPA library

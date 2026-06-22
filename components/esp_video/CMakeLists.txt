@@ -4,7 +4,11 @@ set(srcs "src/esp_video_buffer.c"
          "src/esp_video_mman.c"
          "src/esp_video_vfs.c"
          "src/esp_video.c"
-         "src/esp_video_cam.c")
+         "src/esp_video_cam.c"
+         "src/embedded_ov02c10_ipa_config_json.c"
+         "src/embedded_ov5647_ipa_config_json.c"
+         "src/embedded_sc2336_ipa_config_json.c"
+         "src/embedded_sc202cs_ipa_config_json.c")
 
 set(include_dirs "include")
 set(priv_include_dirs "private_include")
