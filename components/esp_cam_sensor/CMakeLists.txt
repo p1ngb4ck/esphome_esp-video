@@ -23,7 +23,8 @@ set(priv_include_dirs "src"
                       "sensor/ov02c10/private_include")
 
 set(requires "esp_driver_i2c" "esp_driver_gpio" "esp_driver_ledc" "esp_driver_cam" "esp_sccb_intf")
-set(priv_requires "spi_flash" "driver")
+set(priv_requires "spi_flash")
+list(APPEND requires "driver")
 
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${include_dirs}
@@ -73,6 +74,7 @@ target_compile_definitions(${COMPONENT_LIB} PUBLIC
     CONFIG_CAMERA_SC2336_AUTO_DETECT=1
     CONFIG_CAMERA_SC2336_AUTO_DETECT_MIPI_INTERFACE_SENSOR=1
     CONFIG_CAMERA_SC2336_MIPI_IF_FORMAT_INDEX_DEFAULT=0
+    CONFIG_CAMERA_SC2336_DVP_IF_FORMAT_INDEX_DEFAULT=0
     CONFIG_CAMERA_SC2336_CSI_LINESYNC_ENABLE=0
     CONFIG_CAMERA_SC2336_ABSOLUTE_GAIN_LIMIT=63008
     CONFIG_CAMERA_SC2336_ANA_GAIN_PRIORITY=0
