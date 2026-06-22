@@ -141,6 +141,7 @@ async def to_code(config):
         if os.path.exists(comp_path):
             add_idf_component(name=comp_name, override_path=comp_path)
 
+
     # Build flags
     flags = []
 
