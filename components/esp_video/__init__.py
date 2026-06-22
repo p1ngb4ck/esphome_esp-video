@@ -8,6 +8,7 @@ Initializes ESP-Video using the ESPHome I2C bus.
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import i2c, esp32
+from esphome.components.esp32 import add_idf_component
 from esphome.const import CONF_ID, CONF_I2C_ID
 from esphome.core import CORE
 import os
@@ -132,48 +133,13 @@ async def to_code(config):
     else:
         logging.debug(f"[ESP-Video] XCLK: PCB oscillator @ {xclk_freq/1000000:.1f} MHz")
 
-    # Add include directories
-    includes_found = False
-
-    # esp_video
-    for inc in ["include", "private_include", "src"]:
-        inc_path = os.path.join(component_dir, inc)
-        if os.path.exists(inc_path):
-            cg.add_build_flag(f"-I{inc_path}")
-            includes_found = True
-
-    # esp_cam_sensor
-    esp_cam_sensor_dir = os.path.join(parent_components_dir, "esp_cam_sensor")
-    if os.path.exists(esp_cam_sensor_dir):
-        for inc in ["include", "sensor/ov5647/include", "sensor/sc202cs/include", "sensor/ov02c10/include", "src", "src/driver_spi", "src/driver_cam"]:
-            inc_path = os.path.join(esp_cam_sensor_dir, inc)
-            if os.path.exists(inc_path):
-                cg.add_build_flag(f"-I{inc_path}")
-                includes_found = True
-
-    # esp_ipa
-    esp_ipa_dir = os.path.join(parent_components_dir, "esp_ipa")
-    if os.path.exists(esp_ipa_dir):
-        for inc in ["include", "src"]:
-            inc_path = os.path.join(esp_ipa_dir, inc)
-            if os.path.exists(inc_path):
-                cg.add_build_flag(f"-I{inc_path}")
-                includes_found = True
-
-    # esp_sccb_intf
-    esp_sccb_intf_dir = os.path.join(parent_components_dir, "esp_sccb_intf")
-    if os.path.exists(esp_sccb_intf_dir):
-        for inc in ["include", "interface", "sccb_i2c/include"]:
-            inc_path = os.path.join(esp_sccb_intf_dir, inc)
-            if os.path.exists(inc_path):
-                cg.add_build_flag(f"-I{inc_path}")
-                includes_found = True
-
-    if not includes_found:
-        logging.warning(
-            "[ESP-Video] No include directories found! "
-            "Check ESP-Video component structure."
-        )
+    # Register local components as IDF components via override_path.
+    # This replaces the PlatformIO SCons build script — IDF/cmake picks up
+    # each component's CMakeLists.txt, include dirs, and sources automatically.
+    for comp_name in ("esp_video", "esp_cam_sensor", "esp_ipa", "esp_sccb_intf"):
+        comp_path = os.path.join(parent_components_dir, comp_name)
+        if os.path.exists(comp_path):
+            add_idf_component(name=comp_name, override_path=comp_path)
 
     # Build flags
     flags = []
@@ -258,9 +224,3 @@ async def to_code(config):
     ]:
         cg.add_build_flag(flag)
 
-    # PlatformIO build script (required)
-    build_script_path = os.path.join(component_dir, "esp_video_build.py")
-    if os.path.exists(build_script_path):
-        cg.add_platformio_option("extra_scripts", [f"post:{build_script_path}"])
-    else:
-        raise cv.Invalid(f"Build script not found: {build_script_path}")
