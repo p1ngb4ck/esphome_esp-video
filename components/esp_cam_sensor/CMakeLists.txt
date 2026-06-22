@@ -22,7 +22,7 @@ set(priv_include_dirs "src"
                       "sensor/sc2336/include/private_include"
                       "sensor/ov02c10/private_include")
 
-set(requires "esp_driver_i2c" "esp_driver_gpio" "esp_driver_ledc" "esp_driver_cam")
+set(requires "esp_driver_i2c" "esp_driver_gpio" "esp_driver_ledc" "esp_driver_cam" "esp_sccb_intf")
 set(priv_requires "spi_flash" "driver")
 
 idf_component_register(SRCS ${srcs}
