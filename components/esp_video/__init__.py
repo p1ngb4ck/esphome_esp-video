@@ -8,7 +8,7 @@ Initializes ESP-Video using the ESPHome I2C bus.
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import i2c, esp32
-from esphome.components.esp32 import add_idf_component
+from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
 from esphome.const import CONF_ID, CONF_I2C_ID
 from esphome.core import CORE
 import os
@@ -142,81 +142,34 @@ async def to_code(config):
             add_idf_component(name=comp_name, override_path=comp_path)
 
 
-    # Build flags
-    flags = []
+    # ESP_VIDEO feature flags: use add_idf_sdkconfig_option so CMakeLists if(CONFIG_...)
+    # guards evaluate correctly at cmake configure time (add_build_flag only adds -D
+    # compiler flags and does NOT populate CMake/sdkconfig variables).
+    add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_ENABLE_MIPI_CSI_VIDEO_DEVICE", True)
+    add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_DISABLE_MIPI_CSI_DRIVER_BACKUP_BUFFER", True)
 
-    # Base flags (always enabled)
-    flags.extend([
-        "-DCONFIG_ESP_VIDEO_ENABLE_MIPI_CSI_VIDEO_DEVICE=1",
-        "-DCONFIG_IDF_TARGET_ESP32P4=1",
-        "-DCONFIG_SOC_I2C_SUPPORTED=1",
-    ])
-
-    # Camera sensors — auto-detection will probe all and use whichever responds
-
-    # SC202CS — matches M5Stack Tab5 configuration
-    # Digital gain priority recommended to reduce noise in low light
-    flags.extend([
-        "-DCONFIG_CAMERA_SC202CS=1",
-        "-DCONFIG_CAMERA_SC202CS_AUTO_DETECT=1",
-        "-DCONFIG_CAMERA_SC202CS_AUTO_DETECT_MIPI_INTERFACE_SENSOR=1",
-        "-DCONFIG_CAMERA_SC202CS_ABSOLUTE_GAIN_LIMIT=63008",  # M5Stack value
-        "-DCONFIG_CAMERA_SC202CS_ANA_GAIN_PRIORITY=0",        # Disabled (M5Stack)
-        "-DCONFIG_CAMERA_SC202CS_DIG_GAIN_PRIORITY=1",        # Enabled (M5Stack)
-        "-DCONFIG_CAMERA_SC202CS_MAX_SUPPORT=1",
-    ])
-
-    # OV5647
-    flags.extend([
-        "-DCONFIG_CAMERA_OV5647=1",
-        "-DCONFIG_CAMERA_OV5647_AUTO_DETECT=1",
-        "-DCONFIG_CAMERA_OV5647_AUTO_DETECT_MIPI_INTERFACE_SENSOR=1",
-        "-DCONFIG_CAMERA_OV5647_CSI_LINESYNC_ENABLE=0",
-        "-DCONFIG_CAMERA_OV5647_MIPI_IF_FORMAT_INDEX_DEFAULT=0",
-        "-DCONFIG_CAMERA_OV5647_DEFAULT_IPA_JSON_CONFIGURATION_FILE=0",  # Disabled: CCM in JSON causes red tint (matrix amplifies red 2.0x)
-    ])
-
-    # OV02C10
-    flags.extend([
-        "-DCONFIG_CAMERA_OV02C10=1",
-        "-DCONFIG_CAMERA_OV02C10_AUTO_DETECT=1",
-        "-DCONFIG_CAMERA_OV02C10_AUTO_DETECT_MIPI_INTERFACE_SENSOR=1",
-        "-DCONFIG_CAMERA_OV02C10_ABSOLUTE_GAIN_LIMIT=16000",  # 16x max
-        "-DCONFIG_CAMERA_OV02C10_ANA_GAIN_PRIORITY=1",        # Analog gain priority
-        "-DCONFIG_CAMERA_OV02C10_DIG_GAIN_PRIORITY=0",
-        "-DCONFIG_CAMERA_OV02C10_CSI_LINESYNC_ENABLE=0",
-        "-DCONFIG_CAMERA_OV02C10_MIPI_IF_FORMAT_INDEX_DEFAULT=0",
-        "-DCONFIG_CAMERA_OV02C10_MAX_SUPPORT=1",
-        "-DCONFIG_CAMERA_OV02C10_DEFAULT_IPA_JSON_CONFIGURATION_FILE=1",  # Use cfg/ov02c10_default.json
-    ])
-
-    # ISP (Image Signal Processor)
     if config[CONF_ENABLE_ISP]:
-        flags.extend([
-            "-DCONFIG_ESP_VIDEO_ENABLE_ISP=1",
-            "-DCONFIG_ESP_VIDEO_ENABLE_ISP_VIDEO_DEVICE=1",
-            "-DCONFIG_ESP_VIDEO_ENABLE_ISP_PIPELINE_CONTROLLER=1",
-            "-DESP_VIDEO_ISP_ENABLED=1",  # Used in esp_video_component.cpp
-        ])
+        add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_ENABLE_ISP", True)
+        add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_ENABLE_ISP_VIDEO_DEVICE", True)
+        add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_ENABLE_ISP_PIPELINE_CONTROLLER", True)
+        cg.add_build_flag("-DESP_VIDEO_ISP_ENABLED=1")
 
-    # USB-UVC host video device (external USB camera on the P4 USB OTG port)
     if config[CONF_ENABLE_UVC]:
-        flags.append("-DCONFIG_ESP_VIDEO_ENABLE_USB_UVC_VIDEO_DEVICE=1")
+        add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_ENABLE_USB_UVC_VIDEO_DEVICE", True)
 
-    # Memory allocator
     if config[CONF_USE_HEAP_ALLOCATOR]:
-        flags.append("-DCONFIG_ESP_VIDEO_USE_HEAP_ALLOCATOR=1")
+        add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_USE_HEAP_ALLOCATOR", True)
 
-    # JPEG encoder
     if config[CONF_ENABLE_JPEG]:
-        flags.extend([
-            "-DCONFIG_ESP_VIDEO_ENABLE_JPEG_VIDEO_DEVICE=1",
-            "-DCONFIG_ESP_VIDEO_ENABLE_HW_JPEG_VIDEO_DEVICE=1",
-            "-DESP_VIDEO_JPEG_ENABLED=1",  # Used in esp_video_component.cpp
-        ])
+        add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_ENABLE_JPEG_VIDEO_DEVICE", True)
+        add_idf_sdkconfig_option("CONFIG_ESP_VIDEO_ENABLE_HW_JPEG_VIDEO_DEVICE", True)
+        cg.add_build_flag("-DESP_VIDEO_JPEG_ENABLED=1")
 
-    for flag in flags:
-        cg.add_build_flag(flag)
+    # Camera sensor CONFIG_ symbols: these are consumed by C source only (not CMake guards),
+    # so add_build_flag is correct here. They are also set via target_compile_definitions
+    # in esp_cam_sensor/CMakeLists.txt for the sensor driver sources; these flags cover
+    # any other translation units that include sensor headers.
+    cg.add_build_flag("-DCONFIG_ESP_VIDEO_ENABLE_MIPI_CSI_VIDEO_DEVICE=1")
 
     for flag in [
         "-Wno-unused-function",
