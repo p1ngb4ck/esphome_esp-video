@@ -218,8 +218,8 @@ if CAMERA_SC2336
 
     config CAMERA_SC2336_DVP_IF_FORMAT_INDEX_DEFAULT
         int
-        depends on SOC_LCDCAM_CAM_SUPPORTED
         default 0 if CAMERA_SC2336_DVP_DEFAULT_FMT_RAW10_1280X720_30FPS
+        default 0
         help
             Sets the configuration loaded by default for the DVP interface.
             Use query_support_formats() API to get more format options.
