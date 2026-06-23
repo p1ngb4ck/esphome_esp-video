@@ -24,11 +24,10 @@ typedef struct {
 namespace esphome {
 namespace esp_cam_sensor {
 
-// Simple buffer element pour triple buffering (remplace esp_video_buffer)
+// Handle returned by acquire_buffer() — wraps a stable app-owned display buffer
 struct SimpleBufferElement {
-  uint8_t *data;      // Pointeur vers données RGB565
-  bool allocated;     // true = en cours d'utilisation
-  uint32_t index;     // Index du buffer (0, 1, 2)
+  uint8_t *data;      // Pointeur vers données RGB565 (display buffer, SPIRAM)
+  uint32_t index;     // Index du display buffer (0 or 1)
 };
 
 class MipiDSICamComponent : public Component {
@@ -221,11 +220,23 @@ class MipiDSICamComponent : public Component {
   int video_fd_{-1};       // /dev/video0 (CSI) pour capture frames
   int isp_fd_{-1};         // /dev/video20 (ISP) pour contrôles V4L2 (brightness, contrast, etc.)
 
-  // Buffer pool system (V4L2_MEMORY_USERPTR - zero-copy to SPIRAM)
-  static constexpr int NUM_BUFFERS = 2;  // Double buffering - matches Espressif and Waveshare upstream V4L2 USERPTR camera examples. Two buffers are enough to keep the CSI DMA fed while LVGL renders the previous frame.
-  SimpleBufferElement simple_buffers_[NUM_BUFFERS];
-  int current_buffer_index_{-1};  // Index du buffer actuellement capturé (-1 = aucun)
-  portMUX_TYPE buffer_mutex_;  // Spinlock pour thread-safety (initialisé dans setup)
+  // V4L2 ring buffers (MMAP) — owned by the kernel/DMA, never read by LVGL
+  static constexpr int V4L2_BUF_COUNT = 3;
+  struct V4l2MmapBuf {
+    void *start{nullptr};
+    size_t length{0};
+  };
+  V4l2MmapBuf v4l2_bufs_[V4L2_BUF_COUNT];
+
+  // App-owned display buffers (SPIRAM) — written by stream task, read by LVGL
+  // Double-buffered: stream task writes to [1 - shown_idx_], LVGL reads [shown_idx_]
+  static constexpr int DISPLAY_BUF_COUNT = 2;
+  uint8_t *display_bufs_[DISPLAY_BUF_COUNT]{nullptr, nullptr};
+  volatile int shown_idx_{0};   // index LVGL is currently reading from
+  SemaphoreHandle_t frame_ready_sem_{nullptr};  // given each time stream task writes a new frame
+  TaskHandle_t stream_task_handle_{nullptr};
+  volatile bool stream_task_stop_{false};
+  SimpleBufferElement acquire_elem_{};  // reused by acquire_buffer() — never written by stream task
 
   // Legacy pointer (deprecated, pointe vers current_buffer_ si disponible)
   uint8_t *image_buffer_{nullptr};
@@ -240,6 +251,7 @@ class MipiDSICamComponent : public Component {
 
   bool check_pipeline_health_();
   void cleanup_pipeline_();
+  static void stream_task_(void *arg);
 
   // PPA (Pixel-Processing Accelerator) hardware transform functions
   bool init_ppa_();
