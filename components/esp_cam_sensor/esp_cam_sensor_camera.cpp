@@ -223,16 +223,6 @@ bool MipiDSICamComponent::init_ppa_() {
     return true;
   }
 
-  // Auto-detect: Enable PPA if crop offset, mirror, rotation, or resize is configured
-  if (!this->ppa_user_override_) {
-    if (!this->mirror_x_ && !this->mirror_y_ && this->rotation_ == 0 &&
-        this->crop_offset_x_ == 0 && this->output_width_ == 0 && this->output_height_ == 0) {
-      ESP_LOGI(TAG, "PPA not needed (no mirror/rotate/crop/resize configured)");
-      this->ppa_enabled_ = false;
-      return true;
-    }
-  }
-
   ppa_client_config_t ppa_config = {};
   ppa_config.oper_type = PPA_OPERATION_SRM;
   ppa_config.max_pending_trans_num = 16;
@@ -245,14 +235,19 @@ bool MipiDSICamComponent::init_ppa_() {
 
   this->ppa_enabled_ = true;
 
-  // Log PPA configuration
-  if (this->output_width_ > 0 && this->output_height_ > 0) {
-    ESP_LOGI(TAG, "PPA hardware transform enabled (mirror_x=%d, mirror_y=%d, rotation=%d, crop_offset_x=%d, resize=%dx%d)",
-             this->mirror_x_, this->mirror_y_, this->rotation_, this->crop_offset_x_,
-             this->output_width_, this->output_height_);
+  bool has_transform = this->mirror_x_ || this->mirror_y_ || this->rotation_ != 0 ||
+                       this->crop_offset_x_ != 0 || this->output_width_ > 0 || this->output_height_ > 0;
+  if (has_transform) {
+    if (this->output_width_ > 0 && this->output_height_ > 0) {
+      ESP_LOGI(TAG, "PPA enabled: mirror_x=%d mirror_y=%d rotation=%d crop=%d resize=%dx%d",
+               this->mirror_x_, this->mirror_y_, this->rotation_, this->crop_offset_x_,
+               this->output_width_, this->output_height_);
+    } else {
+      ESP_LOGI(TAG, "PPA enabled: mirror_x=%d mirror_y=%d rotation=%d crop=%d",
+               this->mirror_x_, this->mirror_y_, this->rotation_, this->crop_offset_x_);
+    }
   } else {
-    ESP_LOGI(TAG, "PPA hardware transform enabled (mirror_x=%d, mirror_y=%d, rotation=%d, crop_offset_x=%d)",
-             this->mirror_x_, this->mirror_y_, this->rotation_, this->crop_offset_x_);
+    ESP_LOGI(TAG, "PPA enabled: identity copy (hardware PSRAM→PSRAM DMA, no CPU memcpy)");
   }
 
   return true;
@@ -260,7 +255,7 @@ bool MipiDSICamComponent::init_ppa_() {
 
 bool MipiDSICamComponent::apply_ppa_transform_(uint8_t *src_buffer, uint8_t *dst_buffer) {
   if (!this->ppa_enabled_ || !this->ppa_client_handle_) {
-    return true;  // Pas de transformation
+    return false;  // PPA not available — caller should use memcpy
   }
 
   // SIMPLIFIED PPA configuration to match M5Stack's working implementation
@@ -1172,13 +1167,6 @@ bool MipiDSICamComponent::start_streaming() {
   this->shown_idx_ = 0;
   this->image_buffer_ = this->display_bufs_[0];
 
-  // Allocate PPA intermediate buffer if transform is configured
-  // (stream task writes V4L2 → PPA → display_buf, so no extra alloc needed here)
-  if (this->ppa_enabled_) {
-    // PPA writes directly into display_bufs_[next], no extra buffer required
-    ESP_LOGI(TAG, "PPA enabled: transform will write directly into display buffers");
-  }
-
   // 5. Create frame-ready semaphore (counting, max=1 for latest-frame-only semantics)
   this->frame_ready_sem_ = xSemaphoreCreateCounting(1, 0);
   if (!this->frame_ready_sem_) {
@@ -1199,12 +1187,11 @@ bool MipiDSICamComponent::start_streaming() {
   this->stream_task_stop_ = false;
   this->frame_sequence_ = 0;
 
-  // 7. Reinit PPA if transform was disabled by a previous stop_streaming()
-  if (!this->ppa_enabled_ && (this->mirror_x_ || this->mirror_y_ || this->rotation_ != 0 ||
-                               this->crop_offset_x_ != 0 || this->output_width_ > 0 || this->output_height_ > 0)) {
-    ESP_LOGI(TAG, "Reinitializing PPA (was disabled by previous stop_streaming)");
+  // 7. Always init PPA — used for the PSRAM→PSRAM copy in stream_task_ (identity transform
+  //    when no mirror/rotate/resize configured, hardware DMA otherwise)
+  if (!this->ppa_enabled_) {
     if (!this->init_ppa_()) {
-      ESP_LOGW(TAG, "PPA reinitialization failed");
+      ESP_LOGW(TAG, "PPA init failed — falling back to CPU memcpy for display buffer copy");
     }
   }
 
@@ -1298,12 +1285,10 @@ void MipiDSICamComponent::stream_task_(void *arg) {
     int next_idx = 1 - self->shown_idx_;
     uint8_t *dst = self->display_bufs_[next_idx];
 
-    if (self->ppa_enabled_) {
-      if (!self->apply_ppa_transform_(v4l2_data, dst)) {
-        ESP_LOGE(TAG, "stream_task: PPA transform failed, falling back to memcpy");
-        memcpy(dst, v4l2_data, self->image_buffer_size_);
-      }
-    } else {
+    // Always use PPA for the PSRAM→PSRAM transfer (zero CPU copy).
+    // Falls back to memcpy only if PPA client wasn't initialised.
+    if (!self->apply_ppa_transform_(v4l2_data, dst)) {
+      ESP_LOGW(TAG, "stream_task: PPA failed, falling back to memcpy");
       memcpy(dst, v4l2_data, self->image_buffer_size_);
     }
 
